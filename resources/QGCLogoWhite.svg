@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" id="Layer_1" x="0" y="0" version="1.1" viewBox="0 0 215 215">
+    <!-- Rounded rectangle outline -->
+    <path d="M211.5 151.5c0 33-27 60-60 60h-88c-33 0-60-27-60-60v-88c0-33 27-60 60-60h88c33 0 60 27 60 60z" style="fill:none;stroke:#fff;stroke-width:8;stroke-miterlimit:10"/>
+    <!-- Logo centered inside with padding -->
+    <g transform="translate(35,50) scale(0.5369,0.6238)" fill="#fff">
+        <path d="M135.1,8.89l-25.6,50.69,25.6,140.8,25.6-140.8-25.6-50.69ZM0,0v28.49l106.66,28.28,25.6-50.69L0,0ZM137.95,6.08L270.2,0v28.49l-106.66,28.28-25.6-50.69Z"/>
+    </g>
+</svg>

@@ -1,0 +1,2016 @@
+<title>Titan AI trên Raspberry Pi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root {
+  --paper:    #FBF9F6;
+  --paper-2:  #F3EFE9;
+  --paper-3:  #EAE4DB;
+  --ink:      #1A1613;
+  --ink-2:    #4A4139;
+  --ink-3:    #7D7268;
+  --line:     #DFD8CF;
+  --line-2:   #C8BFB3;
+  --accent:   #C4571A;
+  --accent-w: #FAEADF;
+  --trust:    #1E6A5B;
+  --trust-w:  #E2EFEB;
+  --danger:   #A62B22;
+  --danger-w: #F8E8E6;
+  --warn:     #8A6A11;
+
+  --f-disp: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --f-body: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:    #131110;
+    --paper-2:  #1D1A17;
+    --paper-3:  #26221E;
+    --ink:      #F2EDE6;
+    --ink-2:    #C3B9AD;
+    --ink-3:    #8D8378;
+    --line:     #322C26;
+    --line-2:   #463E36;
+    --accent:   #EF8B49;
+    --accent-w: #2D1C10;
+    --trust:    #4FC0A5;
+    --trust-w:  #0F231E;
+    --danger:   #E27065;
+    --danger-w: #2C1513;
+    --warn:     #D6A93A;
+  }
+}
+
+:root[data-theme="dark"] {
+  --paper:    #131110;
+  --paper-2:  #1D1A17;
+  --paper-3:  #26221E;
+  --ink:      #F2EDE6;
+  --ink-2:    #C3B9AD;
+  --ink-3:    #8D8378;
+  --line:     #322C26;
+  --line-2:   #463E36;
+  --accent:   #EF8B49;
+  --accent-w: #2D1C10;
+  --trust:    #4FC0A5;
+  --trust-w:  #0F231E;
+  --danger:   #E27065;
+  --danger-w: #2C1513;
+  --warn:     #D6A93A;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--f-body);
+  font-size: 16.5px;
+  line-height: 1.66;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- shell ---------- */
+
+.shell {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding-inline: 20px;
+  padding-block: 0 80px;
+  display: grid;
+  grid-template-columns: 232px minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .shell { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+main { min-width: 0; max-width: 74ch; }
+
+/* ---------- masthead ---------- */
+
+.masthead {
+  grid-column: 1 / -1;
+  border-bottom: 2px solid var(--ink);
+  padding-block: 44px 22px;
+  margin-bottom: 44px;
+}
+
+.eyebrow {
+  font-family: var(--f-disp);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 14px;
+}
+
+.masthead h1 {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: clamp(34px, 6.2vw, 62px);
+  line-height: 1.02;
+  letter-spacing: -0.015em;
+  margin: 0 0 16px;
+  text-wrap: balance;
+}
+
+.deck {
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 62ch;
+  margin: 0 0 26px;
+}
+
+.masthead-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 26px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.masthead-meta b {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+/* ---------- toc ---------- */
+
+nav.toc {
+  position: sticky;
+  top: 24px;
+  font-family: var(--f-disp);
+  font-size: 13.5px;
+  line-height: 1.42;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
+
+@media (max-width: 1000px) {
+  nav.toc {
+    position: static;
+    margin-bottom: 48px;
+    columns: 2;
+    column-gap: 28px;
+  }
+}
+
+@media (max-width: 560px) {
+  nav.toc { columns: 1; }
+}
+
+nav.toc .toc-title {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+nav.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: toc;
+}
+
+nav.toc li {
+  counter-increment: toc;
+  margin-bottom: 5px;
+  break-inside: avoid;
+}
+
+nav.toc a {
+  color: var(--ink-2);
+  text-decoration: none;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  padding-block: 1px;
+}
+
+nav.toc a::before {
+  content: counter(toc);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  padding-top: 2px;
+}
+
+nav.toc a:hover { color: var(--accent); }
+nav.toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---------- sections ---------- */
+
+section {
+  border-top: 1px solid var(--line);
+  padding-top: 34px;
+  margin-top: 52px;
+}
+
+section:first-of-type { border-top: none; margin-top: 0; padding-top: 0; }
+
+h2 {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: clamp(24px, 3.4vw, 33px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  margin: 0 0 6px;
+  text-wrap: balance;
+}
+
+h2 .num {
+  font-family: var(--f-mono);
+  font-size: 0.5em;
+  font-weight: 500;
+  color: var(--accent);
+  display: block;
+  margin-bottom: 8px;
+  letter-spacing: 0.06em;
+}
+
+h3 {
+  font-family: var(--f-disp);
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.22;
+  margin: 34px 0 10px;
+  text-wrap: balance;
+}
+
+h4 {
+  font-family: var(--f-disp);
+  font-weight: 600;
+  font-size: 15.5px;
+  letter-spacing: 0.02em;
+  margin: 24px 0 8px;
+  color: var(--ink-2);
+}
+
+p { margin: 0 0 15px; }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+ul, ol { margin: 0 0 16px; padding-left: 22px; }
+li { margin-bottom: 6px; }
+li > ul, li > ol { margin-top: 6px; }
+
+strong { font-weight: 600; }
+
+code {
+  font-family: var(--f-mono);
+  font-size: 0.855em;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  padding: 0.5px 4px;
+  white-space: nowrap;
+}
+
+/* ---------- lede ---------- */
+
+.lede {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--ink-2);
+  border-left: 3px solid var(--accent);
+  padding-left: 18px;
+  margin: 0 0 26px;
+}
+
+/* ---------- verdict strip ---------- */
+
+.verdict {
+  background: var(--paper-2);
+  border-top: 2px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding: 20px 22px;
+  margin: 26px 0;
+}
+
+.verdict .vt {
+  font-family: var(--f-disp);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 9px;
+}
+
+.verdict p:last-child { margin-bottom: 0; }
+
+/* ---------- findings ---------- */
+
+.findings {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 22px;
+  counter-reset: find;
+}
+
+.findings li {
+  counter-increment: find;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 14px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--line);
+  margin: 0;
+}
+
+.findings li::before {
+  content: "F" counter(find);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  padding-top: 4px;
+}
+
+.findings b { display: block; font-family: var(--f-disp); font-size: 17px; margin-bottom: 3px; }
+.findings span { color: var(--ink-2); font-size: 15.5px; display: block; }
+
+/* ---------- diagrams ---------- */
+
+.diagram {
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  line-height: 1.5;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  padding: 18px 20px;
+  margin: 20px 0;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--ink-2);
+}
+
+.diagram b { color: var(--ink); font-weight: 600; }
+.diagram .u { color: var(--accent); font-weight: 600; }
+.diagram .t { color: var(--trust); font-weight: 600; }
+.diagram .d { color: var(--danger); font-weight: 600; }
+.diagram .c { color: var(--ink-3); font-weight: 400; }
+
+.cap {
+  font-family: var(--f-disp);
+  font-size: 13px;
+  color: var(--ink-3);
+  margin: -12px 0 24px;
+}
+
+/* ---------- code blocks ---------- */
+
+pre.code {
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-2);
+  padding: 15px 18px;
+  margin: 18px 0;
+  overflow-x: auto;
+  color: var(--ink-2);
+}
+
+/* ---------- tables ---------- */
+
+.tw { overflow-x: auto; margin: 20px 0 26px; }
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 520px;
+  font-size: 14.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+th {
+  font-family: var(--f-disp);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  text-align: left;
+  color: var(--ink-3);
+  border-bottom: 1.5px solid var(--ink-2);
+  padding: 0 14px 8px 0;
+  vertical-align: bottom;
+}
+
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px 14px 10px 0;
+  vertical-align: top;
+  color: var(--ink-2);
+  line-height: 1.45;
+}
+
+td:first-child { color: var(--ink); }
+th:last-child, td:last-child { padding-right: 0; }
+
+td code { white-space: nowrap; font-size: 12.5px; }
+
+/* ---------- tags ---------- */
+
+.tag {
+  font-family: var(--f-disp);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.t-keep { background: var(--trust-w); color: var(--trust); }
+.t-ref  { background: var(--accent-w); color: var(--accent); }
+.t-new  { background: var(--paper-3); color: var(--ink-2); }
+.t-danger { background: var(--danger-w); color: var(--danger); }
+
+.tier {
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tier-1 { color: var(--trust); }
+.tier-2 { color: var(--warn); }
+.tier-3 { color: var(--danger); }
+
+/* ---------- legend ---------- */
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  font-family: var(--f-disp);
+  font-size: 13.5px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 22px 0 26px;
+  color: var(--ink-2);
+}
+
+.legend span { display: flex; align-items: center; gap: 8px; }
+.legend i {
+  width: 22px; height: 3px; display: inline-block; flex: none;
+}
+.legend .sw-u { background: var(--accent); }
+.legend .sw-t { background: var(--trust); }
+
+/* ---------- phases ---------- */
+
+.phase {
+  border-top: 1px solid var(--line-2);
+  padding-top: 22px;
+  margin-top: 40px;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .phase { grid-template-columns: minmax(0, 1fr); gap: 0; }
+}
+
+.phase-n {
+  font-family: var(--f-disp);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 0.86;
+  color: var(--line-2);
+  letter-spacing: -0.03em;
+}
+
+.phase-n small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--ink-3);
+  margin-bottom: 5px;
+  line-height: 1;
+}
+
+.phase h3 { margin-top: 0; margin-bottom: 4px; font-size: 21px; }
+
+.phase-goal {
+  color: var(--ink-2);
+  font-size: 15.5px;
+  margin-bottom: 14px;
+}
+
+.pmeta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 2px 20px;
+  font-family: var(--f-disp);
+  font-size: 13px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 10px 0;
+  margin-bottom: 16px;
+}
+
+.pmeta div span {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  font-weight: 600;
+}
+
+.pmeta div b { font-weight: 600; color: var(--ink); }
+
+.cx-low  { color: var(--trust) !important; }
+.cx-med  { color: var(--warn) !important; }
+.cx-high { color: var(--danger) !important; }
+
+.phase h4 { margin-top: 18px; }
+.phase ul { margin-bottom: 12px; }
+.phase li { font-size: 15.5px; }
+
+.risk {
+  background: var(--danger-w);
+  border-left: 3px solid var(--danger);
+  padding: 11px 15px;
+  font-size: 14.5px;
+  color: var(--ink-2);
+  margin: 14px 0 0;
+}
+
+.risk b { color: var(--danger); font-family: var(--f-disp); }
+
+/* ---------- callouts ---------- */
+
+.note {
+  border-left: 3px solid var(--trust);
+  background: var(--trust-w);
+  padding: 14px 18px;
+  margin: 20px 0;
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+
+.note b { font-family: var(--f-disp); color: var(--trust); }
+.note p:last-child { margin-bottom: 0; }
+
+.warn-box {
+  border-left: 3px solid var(--danger);
+  background: var(--danger-w);
+  padding: 14px 18px;
+  margin: 20px 0;
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+
+.warn-box b { font-family: var(--f-disp); color: var(--danger); }
+.warn-box p:last-child { margin-bottom: 0; }
+
+/* ---------- dont list ---------- */
+
+.dont { list-style: none; padding: 0; margin: 0; }
+.dont li {
+  border-bottom: 1px solid var(--line);
+  padding: 13px 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 12px;
+}
+.dont li::before {
+  content: "×";
+  font-family: var(--f-mono);
+  font-size: 17px;
+  color: var(--danger);
+  line-height: 1.3;
+}
+.dont b { font-family: var(--f-disp); display: block; font-size: 16px; margin-bottom: 2px; }
+.dont span { color: var(--ink-2); font-size: 15px; }
+
+/* ---------- closing ---------- */
+
+.closer {
+  border-top: 2px solid var(--ink);
+  margin-top: 56px;
+  padding-top: 26px;
+}
+
+footer {
+  grid-column: 1 / -1;
+  border-top: 1px solid var(--line);
+  margin-top: 60px;
+  padding-top: 18px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+html { scroll-behavior: smooth; }
+:target { scroll-margin-top: 20px; }
+</style>
+
+<div class="shell">
+
+<header class="masthead">
+  <p class="eyebrow">Titan Ground Control · Đánh giá kiến trúc &amp; lộ trình kỹ thuật</p>
+  <h1>Đưa Titan AI xuống Raspberry Pi</h1>
+  <p class="deck">Chuyển trợ lý bay Titan AI từ Claude trên cloud sang mô hình chạy cục bộ trên Raspberry&nbsp;Pi&nbsp;5 — giữ nguyên giao diện, hàng đợi lệnh, cơ chế an toàn và đường đi MAVLink hiện có.</p>
+  <div class="masthead-meta">
+    <span><b>Repo:</b> TitanGroundControl @ <code>master</code></span>
+    <span><b>Phạm vi audit:</b> src/AI, src/Settings, src/FlyView, src/Vehicle</span>
+    <span><b>Ngày:</b> 2026-09-11</span>
+    <span><b>Trạng thái:</b> Chưa sửa code</span>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Mục lục">
+  <div class="toc-title">Mục lục</div>
+  <ol>
+    <li><a href="#s1">Tóm tắt điều hành</a></li>
+    <li><a href="#s2">Kiến trúc Titan AI hiện tại</a></li>
+    <li><a href="#s3">Phân tích mã nguồn</a></li>
+    <li><a href="#s4">Luồng request/response thực tế</a></li>
+    <li><a href="#s5">Cơ chế tool-calling thực tế</a></li>
+    <li><a href="#s6">Cơ chế an toàn hiện có</a></li>
+    <li><a href="#s7">Kiến trúc đích đề xuất</a></li>
+    <li><a href="#s8">Chiến lược API tương thích</a></li>
+    <li><a href="#s9">Kiến trúc Raspberry Pi</a></li>
+    <li><a href="#s10">Lựa chọn mô hình cục bộ</a></li>
+    <li><a href="#s11">Chiến lược tri thức / RAG</a></li>
+    <li><a href="#s12">Chiến lược giọng nói / STT</a></li>
+    <li><a href="#s13">Kiến trúc bảo mật</a></li>
+    <li><a href="#s14">Lộ trình theo giai đoạn</a></li>
+    <li><a href="#s15">Định nghĩa MVP</a></li>
+    <li><a href="#s16">Mục tiêu production</a></li>
+    <li><a href="#s17">Chưa nên xây gì</a></li>
+    <li><a href="#s18">Bước triển khai đầu tiên</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<!-- ══════════════════ 1 ══════════════════ -->
+<section id="s1">
+  <h2><span class="num">01</span>Tóm tắt điều hành</h2>
+
+  <p class="lede">Tin tốt: Titan AI gắn với Anthropic <em>ít hơn nhiều</em> so với giả định ban đầu. Tin cần lưu ý: lớp an toàn bằng code mỏng hơn nhiều so với vẻ ngoài — phần lớn quy tắc an toàn nằm trong system prompt, nghĩa là chúng do mô hình tự nguyện tuân thủ chứ không được cưỡng chế.</p>
+
+  <p>Sau khi đọc toàn bộ <code>src/AI/AIChatController.cc</code> (1.715 dòng), <code>AISystemPrompt.h</code>, <code>AIKnowledgeBase.h</code>, <code>AISettings</code> và <code>AIChatWidget.qml</code>, đây là năm kết luận định hình toàn bộ lộ trình phía dưới.</p>
+
+  <ol class="findings">
+    <li>
+      <b>Code không dùng Anthropic tools API</b>
+      <span>Request body chỉ có 4 trường: <code>model</code>, <code>max_tokens</code>, <code>system</code>, <code>messages</code>. Không có <code>tools</code>, không có <code>tool_use</code>, không có <code>stop_reason</code>, không streaming. Tool-calling được làm bằng cách ép mô hình trả JSON trong text rồi tự parse. Bề mặt API cần mô phỏng lại chỉ khoảng <b>60 dòng Python</b>.</span>
+    </li>
+    <li>
+      <b>Lớp an toàn deterministic rất mỏng</b>
+      <span>Trong C++ chỉ có 6 kiểm tra thật: chặn disarm khi đang bay, kiểm tra hỗ trợ orbit, kênh servo 1–16, tọa độ hợp lệ, tham số tồn tại, và danh sách 4 lệnh nguy hiểm. <b>Không</b> có giới hạn độ cao, không kiểm tra GPS/EKF, không kiểm tra pin, không geofence, không kiểm tra điều kiện flight mode, và <code>set_parameter</code> ghi được <em>mọi</em> tham số ArduPilot.</span>
+    </li>
+    <li>
+      <b>Prompt tĩnh nặng ~9.500 token</b>
+      <span><code>AIKnowledgeBase.h</code> 28.688 ký tự + <code>AISystemPrompt.h</code> 9.529 ký tự = 38.217 ký tự. Với Claude thì prompt caching xử lý gọn; với mô hình nhỏ trên Pi&nbsp;5 CPU thì riêng prefill đã 25–60 giây. <b>Bắt buộc</b> phải cắt gọn — đây là ràng buộc cứng, không phải tối ưu hóa tùy chọn.</span>
+    </li>
+    <li>
+      <b>Lịch sử hội thoại bị mất thông tin</b>
+      <span><code>_sendToClaudeAPI</code> chỉ gửi lại 11 message gần nhất và <em>chỉ chuỗi <code>content</code></em>. Các <code>actions</code> có cấu trúc không được gửi lại, kết quả thực thi cũng không. Hệ quả cụ thể: <code>get_parameter</code> đọc giá trị rồi chỉ <code>qCDebug</code> ra log — mô hình không bao giờ thấy giá trị, nên không thể trả lời trung thực "RTL_ALT đang là bao nhiêu?". Đây là lỗi chức năng có thật, không phải giới hạn thiết kế.</span>
+    </li>
+    <li>
+      <b>TTS đã chạy cục bộ rồi</b>
+      <span><code>_speakMessage</code> gọi <code>AudioOutput::instance()->say()</code> — Qt TextToSpeech, hoàn toàn offline trên máy GCS. Chỉ STT là gọi cloud (Groq Whisper). Không cần đưa TTS xuống Pi.</span>
+    </li>
+  </ol>
+
+  <div class="verdict">
+    <div class="vt">Khuyến nghị chính — lệch so với thứ tự giai đoạn ban đầu</div>
+    <p>Đề bài xếp <em>hardening bảo mật</em> ở Phase&nbsp;7, sau khi mô hình cục bộ đã chạy. Tôi khuyến nghị <b>đảo lên trước</b>: xây lớp <b>Safety &amp; Policy deterministic (Phase&nbsp;2)</b> <em>trước khi</em> cắm mô hình cục bộ vào.</p>
+    <p>Lý do: một mô hình 1–3B ảo giác nhiều hơn Claude Sonnet đáng kể. Ngay lúc này, một action không nằm trong danh sách nguy hiểm sẽ <b>tự động thực thi không cần xác nhận</b> (<code>AIChatController.cc:1043</code>). Nếu thay mô hình trước khi siết lớp guard, ta đang tăng xác suất lỗi đúng vào lúc hàng rào còn mỏng nhất. Phase&nbsp;2 còn có lợi ích độc lập: nó cải thiện đường cloud hiện tại ngay hôm nay, kể cả khi dự án Pi bị hoãn.</p>
+  </div>
+
+  <p>Về khối lượng công việc: vì coupling với Anthropic chỉ gồm <b>7 khóa JSON và 2 header HTTP</b>, MVP "GCS nói chuyện với LLM cục bộ" có thể đạt được với thay đổi rất nhỏ trong C++ — về cơ bản là đưa URL, tên model và kiểu xác thực vào <code>AISettings</code>. Phần lớn công sức thực tế nằm ở phía Pi và ở lớp policy, không nằm ở việc viết lại AI subsystem.</p>
+</section>
+
+<!-- ══════════════════ 2 ══════════════════ -->
+<section id="s2">
+  <h2><span class="num">02</span>Kiến trúc Titan AI hiện tại</h2>
+
+  <p>Toàn bộ tính năng nằm trong một class duy nhất. <code>Vehicle</code> tạo một <code>AIChatController</code> cho mỗi phương tiện (<code>Vehicle.cc:384</code>) và phơi ra QML qua property <code>aiChatController</code> (<code>Vehicle.h:203</code>). Không có lớp trừu tượng nào giữa logic AI và Anthropic.</p>
+
+  <div class="diagram">┌─ QML ──────────────────────────────────────────────────────────┐
+│  <b>AIChatWidget.qml</b>        <span class="c">470 dòng · panel chat kéo thả được</span>    │
+│  <b>FlyViewMap.qml</b>          <span class="c">POI trên bản đồ (thêm/xóa)</span>            │
+│  <b>UI/AppSettings/AISettings.qml</b>  <span class="c">6 Fact cấu hình</span>                │
+└──────────────────────────┬─────────────────────────────────────┘
+                           │ <span class="c">activeVehicle.aiChatController</span>
+                           ▼
+┌─ C++ ──────────────────────────────────────────────────────────┐
+│  <b>AIChatController</b>   <span class="c">src/AI/AIChatController.cc · 1715 dòng</span>      │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │ <span class="u">sendMessage()</span>              <span class="c">← người dùng gõ / nói</span>            │  │
+│  │ <span class="u">_sendToClaudeAPI()</span>         <span class="c">dựng JSON, POST HTTPS</span>           │  │
+│  │ <span class="u">_buildDynamicContext()</span>     <span class="c">state xe + POI + custom ctx</span>     │  │
+│  │ <span class="u">_processAIResponse()</span>       <span class="c">bóc ```json, parse actions[]</span>    │  │
+│  ├──────────────────────────────────────────────────────────┤  │
+│  │ <span class="t">executeCommand()</span>           <span class="c">nạp hàng đợi</span>                    │  │
+│  │ <span class="t">_executeNextAction()</span>       <span class="c">chạy tuần tự</span>                    │  │
+│  │ <span class="t">_isCurrentActionComplete()</span> <span class="c">polling 250 ms</span>                  │  │
+│  │ <span class="t">_executeVehicleCommand()</span>   <span class="c">20 lệnh → Vehicle API</span>           │  │
+│  │ <span class="t">_isDangerousCommand()</span>      <span class="c">4 lệnh</span>                          │  │
+│  ├──────────────────────────────────────────────────────────┤  │
+│  │ <span class="u">_startAudioRecording()</span>     <span class="c">WAV 16 kHz mono</span>                 │  │
+│  │ <span class="u">_sendAudioToWhisper()</span>      <span class="c">multipart → Groq</span>                │  │
+│  │ <span class="t">_speakMessage()</span>            <span class="c">Qt TTS — đã cục bộ</span>              │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└───────┬──────────────────────────────────┬────────────────────┘
+        │                                  │
+        ▼                                  ▼
+ <span class="u">api.anthropic.com</span>                  <span class="t">Vehicle / ParameterManager</span>
+ <span class="u">api.groq.com</span>                       <span class="t">        │</span>
+ <span class="c">(prompt tĩnh ~9.5k token)</span>          <span class="t">     MAVLink → UAV</span></div>
+  <p class="cap">Cam gắn màu: <span style="color:var(--accent)">cam</span> = thành phần phụ thuộc AI/cloud, <span style="color:var(--trust)">xanh</span> = thành phần deterministic do GCS làm chủ. Sự phân tách này là trục chính của toàn bộ lộ trình.</p>
+
+  <div class="legend">
+    <span><i class="sw-u"></i> Không tin cậy — AI suy luận, có thể ảo giác</span>
+    <span><i class="sw-t"></i> Có thẩm quyền — code deterministic, ra quyết định cuối</span>
+  </div>
+</section>
+
+<!-- ══════════════════ 3 ══════════════════ -->
+<section id="s3">
+  <h2><span class="num">03</span>Phân tích mã nguồn</h2>
+
+  <p>Mức gắn với Anthropic được đo bằng số khóa JSON/header thực sự chạm tới, không phải bằng cảm nhận.</p>
+
+  <div class="tw">
+  <table>
+    <thead>
+      <tr><th>Thành phần</th><th>Trách nhiệm</th><th>Gắn với Claude</th><th>Kết luận</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>AIChatWidget.qml</code></td>
+        <td>Panel chat, nút mic, nút xác nhận lệnh, hiển thị tiến độ <code>n/m</code></td>
+        <td>Không. Chỉ đọc <code>_aiSettings.claudeApiKey</code> để bật/tắt cảnh báo "chưa có API key" (dòng 29–30).</td>
+        <td><span class="tag t-keep">Giữ</span> Đổi tên điều kiện thành "provider đã cấu hình".</td>
+      </tr>
+      <tr>
+        <td><code>FlyViewMap.qml</code> (POI)</td>
+        <td>Thêm/xóa POI trên bản đồ, đánh số lại</td>
+        <td>Không</td>
+        <td><span class="tag t-keep">Giữ</span></td>
+      </tr>
+      <tr>
+        <td><code>_executeVehicleCommand()</code><br><span style="font-size:12px;color:var(--ink-3)">dòng 1094–1444</span></td>
+        <td>20 lệnh → API <code>Vehicle</code>. Xử lý riêng QuadPlane (<code>Q_ENABLE</code>), loiter radius cho fixed-wing.</td>
+        <td>Không</td>
+        <td><span class="tag t-keep">Giữ</span> Đây là tài sản giá trị nhất — logic đặc thù firmware đã được kiểm chứng.</td>
+      </tr>
+      <tr>
+        <td>Hàng đợi action<br><span style="font-size:12px;color:var(--ink-3)">dòng 274–558</span></td>
+        <td>Chạy tuần tự, polling 250 ms, phát hiện hoàn thành theo vị trí/độ cao, <code>wait</code>/<code>async_wait</code>, bỏ qua lỗi không nghiêm trọng</td>
+        <td>Không</td>
+        <td><span class="tag t-keep">Giữ</span></td>
+      </tr>
+      <tr>
+        <td><code>_isCurrentActionComplete()</code></td>
+        <td>Ngưỡng 2 m vị trí, 1 m độ cao, takeoff đạt 90% mục tiêu, plane dùng <code>WP_LOITER_RAD × 1.5</code></td>
+        <td>Không</td>
+        <td><span class="tag t-keep">Giữ</span></td>
+      </tr>
+      <tr>
+        <td><code>_speakMessage()</code> + <code>AudioOutput</code></td>
+        <td>TTS qua Qt TextToSpeech, đã offline</td>
+        <td>Không</td>
+        <td><span class="tag t-keep">Giữ</span> Không đưa xuống Pi.</td>
+      </tr>
+      <tr>
+        <td><code>_sendToClaudeAPI()</code><br><span style="font-size:12px;color:var(--ink-3)">dòng 657–740</span></td>
+        <td>Dựng request, cắm API key, gửi POST</td>
+        <td><b>Cao.</b> URL hard-code (677), model hard-code (708), header <code>x-api-key</code> + <code>anthropic-version</code> (680–681), <code>cache_control</code> (720).</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Tách thành <code>_buildRequestBody()</code> + cấu hình endpoint.</td>
+      </tr>
+      <tr>
+        <td><code>_processAIResponse()</code><br><span style="font-size:12px;color:var(--ink-3)">dòng 897–1048</span></td>
+        <td>Bóc fence <code>```json</code>, đếm ngoặc để cắt text thừa, parse <code>actions[]</code> hoặc <code>action</code></td>
+        <td><b>Thấp.</b> Chỉ đụng <code>response["content"]</code> → phần tử <code>type=="text"</code> đầu tiên. Phần còn lại là parse JSON của chính chúng ta.</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Tách bóc-vỏ-wire khỏi parse-action.</td>
+      </tr>
+      <tr>
+        <td>Lịch sử hội thoại<br><span style="font-size:12px;color:var(--ink-3)">dòng 684–706</span></td>
+        <td>11 message gần nhất, chỉ chuỗi text</td>
+        <td>Thấp — cấu trúc <code>{role, content}</code> là mẫu số chung của mọi provider.</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Cần gửi lại cả actions và kết quả thực thi.</td>
+      </tr>
+      <tr>
+        <td><code>_sendAudioToWhisper()</code><br><span style="font-size:12px;color:var(--ink-3)">dòng 1622–1675</span></td>
+        <td>Ghi WAV 16 kHz mono, POST multipart</td>
+        <td>Không phải Anthropic. URL Groq hard-code (1665), model hard-code (1661).</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Chỉ cần đưa URL vào setting — định dạng đã là OpenAI-compatible.</td>
+      </tr>
+      <tr>
+        <td><code>voiceInputAvailable()</code><br><span style="font-size:12px;color:var(--ink-3)">dòng 1453–1461</span></td>
+        <td>Bật nút mic</td>
+        <td>Gán cứng với việc có <code>groqApiKey</code>.</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Endpoint cục bộ không cần key.</td>
+      </tr>
+      <tr>
+        <td><code>AISystemPrompt.h</code></td>
+        <td>Định nghĩa schema JSON, 22 lệnh, quy tắc mode, quy tắc theo loại máy bay</td>
+        <td>Không có gì riêng Anthropic — nhưng viết cho mô hình lớn.</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Cần bản rút gọn cho mô hình nhỏ.</td>
+      </tr>
+      <tr>
+        <td><code>AIKnowledgeBase.h</code></td>
+        <td>28.688 ký tự kiến thức ArduPilot/MAVLink, chia 3 phần do giới hạn 16.380 ký tự của MSVC</td>
+        <td>Không</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Quá lớn cho mô hình cục bộ → chuyển sang RAG.</td>
+      </tr>
+      <tr>
+        <td><code>AISettings</code> + <code>AI.SettingsGroup.json</code></td>
+        <td>6 Fact: 2 API key, TTS, xác nhận, gửi state, custom context</td>
+        <td>Trực tiếp — <code>claudeApiKey</code>, <code>groqApiKey</code>.</td>
+        <td><span class="tag t-ref">Tái cấu trúc</span> Thêm Fact chọn provider + endpoint.</td>
+      </tr>
+      <tr>
+        <td><span style="color:var(--danger)">Lớp validate lệnh</span></td>
+        <td>Kiểm tra độ cao, GPS, pin, geofence, allowlist tham số, điều kiện mode</td>
+        <td>—</td>
+        <td><span class="tag t-danger">Chưa tồn tại</span> Phải xây. Xem mục 06.</td>
+      </tr>
+      <tr>
+        <td><span style="color:var(--danger)">Vòng phản hồi kết quả</span></td>
+        <td>Trả kết quả thực thi về cho mô hình</td>
+        <td>—</td>
+        <td><span class="tag t-danger">Chưa tồn tại</span> Khiến <code>get_parameter</code> vô dụng.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p><b>Lưu ý xây dựng:</b> <code>src/AI/CMakeLists.txt</code> liệt kê <code>AIChatController.cc/.h</code>, <code>AISystemPrompt.h</code>, <code>POIItem.h</code> nhưng <em>bỏ sót</em> <code>AIKnowledgeBase.h</code>. File vẫn compile được vì nó được include gián tiếp qua <code>AISystemPrompt.h</code>, nhưng IDE và một số công cụ phân tích sẽ không thấy nó. Sửa một dòng, nên gộp vào Phase&nbsp;0.</p>
+</section>
+
+<!-- ══════════════════ 4 ══════════════════ -->
+<section id="s4">
+  <h2><span class="num">04</span>Luồng request/response thực tế</h2>
+
+  <p>Đây là luồng đã được đối chiếu với code, không phải suy diễn từ tài liệu.</p>
+
+  <div class="diagram"><b>1. Nhập liệu</b>
+   AIChatWidget.qml  →  sendMessage(text)                      <span class="c">:165</span>
+   hoặc: mic → _startAudioRecording() → WAV 16 kHz mono
+         → Groq Whisper → voiceInputReceived → sendMessage()   <span class="c">:1517</span>
+   ┌ Chặn: nếu _isProcessing thì bỏ qua (không có hàng đợi)    <span class="c">:172</span>
+
+<b>2. Dựng prompt</b>  _sendToClaudeAPI()                       <span class="c">:657</span>
+   system[0] = KB1 + KB2 + KB3 + kAISystemPrompt
+               + cache_control:{type:"ephemeral"}              <span class="c">~9.500 token</span>
+   system[1] = _buildDynamicContext()
+               ├ CURRENT VEHICLE STATE  <span class="c">firmware, loại xe, VTOL,</span>
+               │                        <span class="c">armed, flying, mode, alt,</span>
+               │                        <span class="c">speed, heading, vị trí, home,</span>
+               │                        <span class="c">khoảng cách/hướng về home,</span>
+               │                        <span class="c">capabilities được hỗ trợ</span>
+               ├ POINTS OF INTEREST     <span class="c">lat/lon 10 chữ số</span>
+               └ ADDITIONAL CONTEXT     <span class="c">customContext của người dùng</span>
+   messages  = 11 message cuối, <span class="d">chỉ trường content dạng chuỗi</span>  <span class="c">:687</span>
+
+<b>3. Truyền tải</b>
+   POST https://api.anthropic.com/v1/messages
+   x-api-key: &lt;claudeApiKey&gt;   anthropic-version: 2023-06-01
+   body = { model, max_tokens: 4096, system[], messages[] }
+   timeout 30.000 ms  <span class="c">(QGCNetworkHelper::kDefaultTimeoutMs)</span>
+   <span class="d">Không stream. Không retry. Không huỷ theo yêu cầu người dùng.</span>
+
+<b>4. Phân tích phản hồi</b>  _processAIResponse()               <span class="c">:897</span>
+   response["content"][] → phần tử type=="text" đầu tiên
+   ├ bóc ```json / ``` mở đầu
+   ├ cắt mọi thứ sau ``` đóng
+   ├ đếm ngoặc nhọn → cắt text thừa sau object JSON
+   └ parse → { message, actions[] | action, confirmation_needed }
+   <span class="c">Nếu không parse được JSON → hiển thị nguyên text như câu trả lời</span>
+
+<b>5. Quyết định an toàn</b>                                     <span class="c">:1029</span>
+   nếu confirmDangerousCommands == true (mặc định):
+      với mỗi action, nếu _isDangerousCommand() → ép xác nhận
+   <span class="d">Ngược lại, tin vào cờ confirmation_needed do LLM tự đặt</span>
+
+<b>6. Thực thi</b>
+   <span class="d">confirmation_needed == false  →  TỰ ĐỘNG CHẠY, không hỏi</span>    <span class="c">:1043</span>
+   confirmation_needed == true   →  chờ người bấm nút           <span class="c">qml:262</span>
+       ↓
+   executeCommand(index) → nạp _actionQueue → _executeNextAction()
+       ↓
+   _executeVehicleCommand() → Vehicle::guidedModeTakeoff() ...
+       ↓
+   MAVLink → UAV</div>
+
+  <h3>Những gì <em>không</em> xảy ra</h3>
+  <ul>
+    <li><b>Kết quả không quay lại mô hình.</b> Sau khi hàng đợi chạy xong, không có request nào gửi kết quả về. Mô hình chỉ biết những gì nó tự nói ở lượt trước.</li>
+    <li><b>Không có timeout riêng cho AI.</b> Dùng mặc định 30 giây của <code>QGCNetworkHelper</code> qua <code>createRequest()</code> (transfer timeout). Với LLM cục bộ chậm, 30 giây có thể không đủ — cần Fact riêng.</li>
+    <li><b>Không có cơ chế thử lại.</b> Lỗi mạng → thêm một message hệ thống rồi dừng.</li>
+    <li><b>Không đọc <code>usage</code>.</b> Không theo dõi token, không theo dõi chi phí.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════ 5 ══════════════════ -->
+<section id="s5">
+  <h2><span class="num">05</span>Cơ chế tool-calling thực tế</h2>
+
+  <p>Không có tool schema nào tồn tại trong codebase — dù ở dạng JSON Schema hay cấu trúc C++. "Schema" là văn xuôi trong <code>AISystemPrompt.h</code> mục 2, và hợp đồng đầu ra là một object JSON duy nhất mà mô hình được yêu cầu trả về nguyên văn.</p>
+
+  <pre class="code">{
+  "understood": true,
+  "actions": [
+    {"action": "set_flight_mode", "parameters": {"mode_name": "Guided"}},
+    {"action": "arm",     "parameters": {}},
+    {"action": "takeoff", "parameters": {"altitude_m": 30}}
+  ],
+  "message": "Cất cánh lên 30 mét.",
+  "confirmation_needed": true
+}</pre>
+
+  <p>Parser chấp nhận cả dạng một action (<code>action</code> + <code>parameters</code> ở cấp gốc) để tương thích ngược. Trường <code>understood</code> được mô hình sinh ra nhưng <b>code không bao giờ đọc</b> — một di sản vô hại.</p>
+
+  <div class="note">
+    <p><b>Đây là lợi thế lớn cho mô hình cục bộ.</b> Vì hợp đồng là "trả về một object JSON", ta có thể ép nó bằng <b>constrained decoding</b> — grammar GBNF của llama.cpp, hoặc JSON Schema mode. Với grammar, mô hình <em>không thể</em> sinh ra JSON sai cú pháp, không thể bịa tên action ngoài enum, không thể bỏ sót tham số bắt buộc. Một mô hình 1,5B có grammar thường đáng tin cậy hơn một mô hình 7B không grammar ở đúng bài toán này.</p>
+    <p>Nếu code đã dùng Anthropic native tool-use, ta sẽ phải mô phỏng cả định dạng <code>tool_use</code>/<code>tool_result</code> nhiều lượt. Thiết kế JSON-in-text vô tình làm việc chuyển đổi dễ hơn nhiều.</p>
+  </div>
+
+  <h3>Phân loại 22 lệnh theo mức tin cậy</h3>
+
+  <p>Cột "Cần thêm gì" liệt kê kiểm tra deterministic hiện <em>chưa</em> có. Bậc tin cậy: <span class="tier tier-1">T1</span> chạy tự động · <span class="tier tier-2">T2</span> phải xác nhận · <span class="tier tier-3">T3</span> LLM chỉ được đề xuất, không bao giờ tự chạy.</p>
+
+  <div class="tw">
+  <table>
+    <thead>
+      <tr><th>Lệnh</th><th>Tham số</th><th>Bậc</th><th>Nguy hiểm hôm nay?</th><th>Cần thêm gì</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>get_parameter</code></td><td><code>name</code></td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Trả giá trị về cho mô hình — hiện chỉ ghi log</td></tr>
+      <tr><td><code>wait</code></td><td><code>duration_s</code></td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Giới hạn trên (vd 300 s)</td></tr>
+      <tr><td><code>async_wait</code></td><td><code>duration_s</code></td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Giới hạn trên</td></tr>
+      <tr><td><code>pause</code></td><td>—</td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Kiểm tra <code>supports()-&gt;pauseVehicle()</code></td></tr>
+      <tr><td><code>set_speed</code></td><td><code>speed_mps</code></td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Kẹp theo <code>WPNAV_SPEED</code> / <code>AIRSPEED_MAX</code></td></tr>
+      <tr><td><code>change_heading</code></td><td><code>heading_deg</code></td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Chuẩn hoá 0–360; chặn với plane/VTOL trong code, không chỉ trong prompt</td></tr>
+      <tr><td><code>orbit</code></td><td><code>radius_m</code>, <code>direction</code>, lat/lon</td><td><span class="tier tier-1">T1</span></td><td>Không</td><td>Giới hạn bán kính; đã có kiểm tra capability</td></tr>
+      <tr><td><code>change_altitude</code></td><td><code>altitude_m</code> | <code>change_m</code></td><td><span class="tier tier-2">T2</span></td><td>Không</td><td><b>Giới hạn độ cao trần/sàn</b> — hiện chấp nhận mọi giá trị</td></tr>
+      <tr><td><code>goto</code></td><td>lat, lon, <code>altitude_m</code></td><td><span class="tier tier-2">T2</span></td><td>Không</td><td>Giới hạn khoảng cách tối đa; kiểm tra geofence; kiểm tra đang bay</td></tr>
+      <tr><td><code>fly_heading</code></td><td><code>heading_deg</code>, <code>distance_m</code></td><td><span class="tier tier-2">T2</span></td><td>Không</td><td>Giới hạn khoảng cách</td></tr>
+      <tr><td><code>land</code></td><td>—</td><td><span class="tier tier-2">T2</span></td><td><b>Không</b> — nên là có</td><td>Thêm vào danh sách nguy hiểm</td></tr>
+      <tr><td><code>rtl</code></td><td><code>smart_rtl</code></td><td><span class="tier tier-2">T2</span></td><td><b>Không</b> — nên là có</td><td>Thêm vào danh sách nguy hiểm</td></tr>
+      <tr><td><code>set_flight_mode</code></td><td><code>mode_name</code></td><td><span class="tier tier-2">T2</span></td><td><b>Không</b></td><td>Allowlist tên mode; đối chiếu danh sách mode thật của firmware</td></tr>
+      <tr><td><code>start_mission</code></td><td>—</td><td><span class="tier tier-2">T2</span></td><td><b>Không</b></td><td>Kiểm tra mission đã nạp và hợp lệ</td></tr>
+      <tr><td><code>pause_mission</code></td><td>—</td><td><span class="tier tier-2">T2</span></td><td>Không</td><td>—</td></tr>
+      <tr><td><code>goto_waypoint</code></td><td><code>waypoint_index</code></td><td><span class="tier tier-2">T2</span></td><td><b>Không</b></td><td>Kiểm tra index nằm trong mission hiện có</td></tr>
+      <tr><td><code>arm</code></td><td>—</td><td><span class="tier tier-2">T2</span></td><td>Có</td><td>Kiểm tra GPS fix, EKF, pin trước khi cho phép</td></tr>
+      <tr><td><code>disarm</code></td><td>—</td><td><span class="tier tier-2">T2</span></td><td>Có</td><td>Đã chặn khi đang bay ✓</td></tr>
+      <tr><td><code>takeoff</code></td><td><code>altitude_m</code></td><td><span class="tier tier-2">T2</span></td><td>Có</td><td><b>Giới hạn độ cao</b>; kiểm tra GPS/EKF; kiểm tra đã armed</td></tr>
+      <tr><td><code>set_servo</code></td><td><code>channel</code>, <code>pwm</code></td><td><span class="tier tier-3">T3</span></td><td><b>Không</b></td><td><b>Bắt buộc kiểm tra <code>SERVOn_FUNCTION == 0</code></b></td></tr>
+      <tr><td><code>set_parameter</code></td><td><code>name</code>, <code>value</code></td><td><span class="tier tier-3">T3</span></td><td><b>Không</b></td><td><b>Allowlist tham số + kẹp giá trị</b> — rủi ro lớn nhất hiện nay</td></tr>
+      <tr><td><code>emergency_stop</code></td><td>—</td><td><span class="tier tier-3">T3</span></td><td>Có</td><td>LLM chỉ được đề xuất; chỉ nút bấm của người mới thực thi</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn-box">
+    <p><b><code>set_servo</code> không thực thi chính quy tắc của mình.</b> Cuối <code>AIKnowledgeBase.h</code> viết rõ: <em>"Only channels with FUNCTION=0 are safe for set_servo commands. Motor channels (33-40) must NEVER be set manually."</em> Nhưng code tại dòng 1407 chỉ kiểm tra <code>channel &gt;= 1 &amp;&amp; channel &lt;= 16</code>. Trên một copter, kênh 1–8 thường <em>chính là</em> đầu ra motor (<code>SERVOn_FUNCTION</code> 33–40). Quy tắc được viết cho mô hình đọc, không được cưỡng chế trong code.</p>
+  </div>
+
+  <h3>Lệnh nên tách nhỏ</h3>
+  <ul>
+    <li><b><code>set_parameter</code> → tách hai.</b> <code>set_tuning_parameter</code> (allowlist các tham số điều chỉnh bay như <code>WPNAV_SPEED</code>, <code>WP_LOITER_RAD</code>, <code>RTL_ALT</code>, có kẹp giá trị) và <code>set_parameter_advanced</code> (bậc T3, luôn cần xác nhận kèm hiển thị giá trị cũ → giá trị mới). Hiện tại mô hình có thể ghi <code>ARMING_CHECK=0</code>, <code>FS_THR_ENABLE=0</code> hay <code>Q_ENABLE</code> mà không có bất kỳ rào cản nào.</li>
+    <li><b><code>takeoff</code> → thêm tiền điều kiện tường minh.</b> Prompt bảo mô hình tự chèn <code>set_flight_mode("Guided")</code> trước. Không có gì bắt buộc điều đó. Policy layer nên tự chèn hoặc từ chối.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════ 6 ══════════════════ -->
+<section id="s6">
+  <h2><span class="num">06</span>Cơ chế an toàn hiện có</h2>
+
+  <p>Phần này quan trọng vì lộ trình phụ thuộc vào việc đánh giá trung thực hàng rào nào <em>thật sự</em> tồn tại trong code, tách khỏi hàng rào chỉ tồn tại trong prompt.</p>
+
+  <h3>Được cưỡng chế trong C++</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Bảo vệ</th><th>Vị trí</th><th>Phạm vi</th></tr></thead>
+    <tbody>
+      <tr><td>Chặn disarm khi đang bay</td><td><code>AIChatController.cc:1114</code></td><td>Trả <code>false</code>, hàng đợi dừng</td></tr>
+      <tr><td>Ép xác nhận cho lệnh nguy hiểm</td><td><code>:1029–1039</code></td><td>Chỉ khi <code>confirmDangerousCommands</code> bật (mặc định bật)</td></tr>
+      <tr><td>Danh sách nguy hiểm</td><td><code>:1445–1451</code></td><td><code>arm</code>, <code>disarm</code>, <code>takeoff</code>, <code>emergency_stop</code></td></tr>
+      <tr><td>Kiểm tra hỗ trợ orbit</td><td><code>:1272</code></td><td><code>supports()-&gt;orbitMode()</code></td></tr>
+      <tr><td>Kênh servo 1–16</td><td><code>:1407</code></td><td>Không kiểm tra chức năng kênh</td></tr>
+      <tr><td>Tọa độ hợp lệ</td><td><code>:1175</code>, <code>:1237</code></td><td><code>QGeoCoordinate::isValid()</code></td></tr>
+      <tr><td>Tham số phải tồn tại</td><td><code>:1337</code>, <code>:1378</code></td><td>Thử tên gốc rồi tên viết hoa</td></tr>
+      <tr><td>Tuần tự hóa hàng đợi</td><td><code>:296–558</code></td><td>Lệnh mới xóa hàng đợi cũ; lệnh không gây gián đoạn chạy song song</td></tr>
+      <tr><td>Lỗi nghiêm trọng dừng chuỗi</td><td><code>:441–458</code></td><td>Lỗi không nghiêm trọng thì bỏ qua và chạy tiếp</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Chỉ tồn tại trong prompt — không được cưỡng chế</h3>
+  <p>Những quy tắc sau nằm trong <code>AISystemPrompt.h</code> và <code>AIKnowledgeBase.h</code>. Chúng là <em>lời khuyên cho mô hình</em>, và một mô hình khác sẽ tuân thủ kém hơn:</p>
+  <ul>
+    <li>Phải chuyển Guided trước khi <code>goto</code>/<code>fly_heading</code>/<code>change_altitude</code>/<code>pause</code>/<code>orbit</code></li>
+    <li>Phải chuyển Auto trước khi <code>start_mission</code>/<code>goto_waypoint</code></li>
+    <li>Mode Brake chặn mọi lệnh bay — phải chuyển Guided trước</li>
+    <li><code>change_heading</code> chỉ dành cho copter, không dùng cho plane/VTOL</li>
+    <li>Plane dùng <code>Autoland</code> để hạ cánh; <code>rtl</code> của plane chỉ lượn vòng chứ không hạ</li>
+    <li>QuadPlane dùng <code>QRTL</code>/<code>QLAND</code>, không thêm <code>disarm</code> sau đó</li>
+    <li>Không được đặt PWM cho kênh motor</li>
+    <li>Kiểm tra "Supported Capabilities" trước khi dùng <code>orbit</code>/<code>change_heading</code></li>
+  </ul>
+
+  <h3>Hoàn toàn không tồn tại</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Kiểm tra</th><th>Hậu quả nếu mô hình sai</th></tr></thead>
+    <tbody>
+      <tr><td>Giới hạn độ cao</td><td><code>takeoff(altitude_m: 3000)</code> được chấp nhận và gửi thẳng xuống FC</td></tr>
+      <tr><td>GPS fix / trạng thái EKF</td><td>Lệnh <code>arm</code> gửi đi dù chưa có định vị</td></tr>
+      <tr><td>Mức pin</td><td>Cho phép cất cánh với pin gần cạn</td></tr>
+      <tr><td>Geofence</td><td><code>goto</code> tới tọa độ bất kỳ trên Trái Đất</td></tr>
+      <tr><td>Khoảng cách tối đa</td><td><code>fly_heading(distance_m: 50000)</code> được chấp nhận</td></tr>
+      <tr><td>Allowlist tham số</td><td>Ghi được <code>ARMING_CHECK</code>, <code>FS_*</code>, <code>BRD_SAFETY*</code>, <code>Q_ENABLE</code></td></tr>
+      <tr><td>Giới hạn tần suất lệnh</td><td>Không có chống ngập lệnh</td></tr>
+      <tr><td>Tiền điều kiện flight mode</td><td>Lệnh Guided gửi khi đang ở Stabilize sẽ bị FC bỏ qua âm thầm</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="warn-box">
+    <p><b>Rủi ro kết hợp.</b> Với cấu hình mặc định, một action <em>không</em> nằm trong danh sách 4 lệnh nguy hiểm sẽ tự động thực thi mà không có người xác nhận (<code>:1043</code>). Kết hợp với việc không có giới hạn độ cao/khoảng cách và không có allowlist tham số, điều đó có nghĩa: một câu trả lời ảo giác chứa <code>set_parameter</code> hoặc <code>goto</code> sai sẽ đi thẳng tới flight controller.</p>
+    <p>Với Claude Sonnet, xác suất đó thấp. Với mô hình 1–3B, nó <b>không còn thấp</b>. Đây chính là lý do Phase&nbsp;2 phải đi trước Phase&nbsp;4.</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 7 ══════════════════ -->
+<section id="s7">
+  <h2><span class="num">07</span>Kiến trúc đích đề xuất</h2>
+
+  <div class="diagram">╔═ MÁY GCS ═══════════════════════════════════════════════════════╗
+║                                                                 ║
+║  <b>AIChatWidget.qml</b>              <span class="c">giữ nguyên</span>                        ║
+║        │                                                        ║
+║  <b>AIChatController</b>                                                ║
+║        │                                                        ║
+║        ├─ <span class="u">AIRequestBuilder</span>       <span class="c">dựng system + messages</span>            ║
+║        ├─ <span class="u">AIResponseParser</span>       <span class="c">bóc vỏ wire → actions[]</span>          ║
+║        │                                                        ║
+║        │   ┌────────────── RANH GIỚI TIN CẬY ──────────────┐    ║
+║        │   │  Mọi thứ phía trên là ĐỀ XUẤT, không là LỆNH  │    ║
+║        ▼   └───────────────────────────────────────────────┘    ║
+║  <span class="t">╔═══════════════════════════════════════════════════════════╗</span>  ║
+║  <span class="t">║  AICommandPolicy          ★ THÀNH PHẦN MỚI               ║</span>  ║
+║  <span class="t">║  ├ schema: action có tồn tại? tham số đủ và đúng kiểu?    ║</span>  ║
+║  <span class="t">║  ├ biên:   độ cao, khoảng cách, tốc độ, bán kính          ║</span>  ║
+║  <span class="t">║  ├ trạng thái: GPS, EKF, pin, armed, flying, mode         ║</span>  ║
+║  <span class="t">║  ├ allowlist: tham số nào được ghi, kênh servo nào        ║</span>  ║
+║  <span class="t">║  ├ bậc:    T1 tự động / T2 xác nhận / T3 chỉ người bấm    ║</span>  ║
+║  <span class="t">║  └ tần suất: chống ngập lệnh                              ║</span>  ║
+║  <span class="t">╚═══════════════════════════════════════════════════════════╝</span>  ║
+║        │                                                        ║
+║  <span class="t">_actionQueue</span>          <span class="c">giữ nguyên · tuần tự · polling 250 ms</span>      ║
+║  <span class="t">_executeVehicleCommand</span> <span class="c">giữ nguyên · 20 lệnh</span>                     ║
+║  <span class="t">Vehicle / ParameterManager / MAVLink</span>  <span class="c">giữ nguyên</span>             ║
+║  <span class="t">AudioOutput (TTS)</span>     <span class="c">giữ nguyên · đã offline</span>                  ║
+╚═══════════════════════╤═════════════════════════════════════════╝
+                        │
+              ┌─────────┴─────────┐
+              │                   │
+      <span class="c">Internet (tuỳ chọn)</span>   <span class="c">Ethernet / LAN riêng</span>
+              │                   │
+        <span class="u">api.anthropic.com</span>   ╔═══════════════════════════════════════╗
+        <span class="c">Claude Sonnet</span>       ║ <b>RASPBERRY PI 5</b>  <span class="u">— VÙNG KHÔNG TIN CẬY</span> ║
+                            ║                                       ║
+                            ║  <span class="u">AI Gateway</span>  <span class="c">FastAPI/uvicorn</span>       ║
+                            ║   POST /v1/messages                   ║
+                            ║   POST /v1/audio/transcriptions       ║
+                            ║   GET  /healthz                       ║
+                            ║        │                              ║
+                            ║        ├─ <span class="u">llama.cpp server</span>            ║
+                            ║        │   Qwen2.5-3B Q4_K_M          ║
+                            ║        │   + grammar GBNF             ║
+                            ║        │                              ║
+                            ║        ├─ <span class="u">whisper.cpp server</span>          ║
+                            ║        │   ggml-small / base          ║
+                            ║        │                              ║
+                            ║        └─ <span class="u">RAG</span> <span class="c">sqlite-vec + embed nhỏ</span>  ║
+                            ║            tri thức ArduPilot         ║
+                            ║                                       ║
+                            ║  <span class="d">KHÔNG có: khóa FC, khóa ZFCM,</span>       ║
+                            ║  <span class="d">SE050, kết nối MAVLink trực tiếp</span>    ║
+                            ╚═══════════════════════════════════════╝</div>
+
+  <h3>Ai sở hữu trách nhiệm gì</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Trách nhiệm</th><th>Chủ sở hữu</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Hiểu ý định ngôn ngữ tự nhiên</td><td>LLM (Pi)</td><td>"bay lên cao hơn chút" → <code>change_altitude</code></td></tr>
+      <tr><td>Chọn lệnh và điền tham số</td><td>LLM (Pi)</td><td>Ràng buộc bằng grammar</td></tr>
+      <tr><td>Trả lời câu hỏi về ArduPilot</td><td>LLM + RAG (Pi)</td><td>Không sinh action</td></tr>
+      <tr><td>Diễn giải telemetry thành lời</td><td>LLM (Pi)</td><td>Dữ liệu do GCS cung cấp</td></tr>
+      <tr><td>Nhận dạng giọng nói</td><td>whisper.cpp (Pi)</td><td>Trả text thuần</td></tr>
+      <tr><td><b>Xác thực schema lệnh</b></td><td><b>GCS</b></td><td>Không tin JSON từ Pi</td></tr>
+      <tr><td><b>Kiểm tra biên giá trị</b></td><td><b>GCS</b></td><td>Độ cao, khoảng cách, tốc độ</td></tr>
+      <tr><td><b>Kiểm tra trạng thái xe</b></td><td><b>GCS</b></td><td>GPS, EKF, pin, mode</td></tr>
+      <tr><td><b>Phân bậc nguy hiểm và xác nhận</b></td><td><b>GCS</b></td><td>Người là vòng cuối</td></tr>
+      <tr><td><b>Tuần tự hóa và theo dõi hoàn thành</b></td><td><b>GCS</b></td><td>Hàng đợi hiện tại</td></tr>
+      <tr><td><b>Gửi MAVLink</b></td><td><b>GCS</b></td><td>Pi không bao giờ chạm</td></tr>
+      <tr><td><b>Khóa bí mật, ZFCM, SE050</b></td><td><b>GCS / FC</b></td><td>Pi không có quyền truy cập</td></tr>
+      <tr><td>Văn bản TTS</td><td>GCS</td><td>Qt TextToSpeech, đã offline</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Về <code>IAIProvider</code> — khuyến nghị đi ngược đề bài</h3>
+  <p>Đề bài gợi ý bộ class <code>IAIProvider</code> / <code>ClaudeAIProvider</code> / <code>LocalAIProvider</code> / <code>AIProviderFactory</code>. Với mức coupling đã đo được — <b>7 khóa JSON và 2 header</b> — hệ phân cấp đó là thiết kế thừa ở giai đoạn này. Nó thêm 4 file, một factory, và một tầng gián tiếp để giải quyết một khác biệt vừa đúng bằng "URL nào, header auth nào".</p>
+  <p><b>Khuyến nghị:</b> Phase&nbsp;1 chỉ tách hai hàm trong chính <code>AIChatController</code>:</p>
+  <pre class="code">QJsonObject _buildRequestBody(const QString&amp; system, const QJsonArray&amp; messages) const;
+bool        _parseWireResponse(const QByteArray&amp; data, QString&amp; textOut, QString&amp; errorOut) const;</pre>
+  <p>cộng với các Fact <code>aiProvider</code>, <code>localEndpointUrl</code>, <code>modelName</code>. <b>Điều kiện nâng cấp lên class hierarchy:</b> khi cần hỗ trợ định dạng wire thứ ba thật sự khác biệt (ví dụ OpenAI <code>/v1/chat/completions</code> với <code>choices[].message.content</code>), hoặc khi cần streaming. Trước đó thì chưa.</p>
+</section>
+
+<!-- ══════════════════ 8 ══════════════════ -->
+<section id="s8">
+  <h2><span class="num">08</span>Chiến lược API tương thích</h2>
+
+  <p>Đây là tập con chính xác của Anthropic Messages API mà <code>AIChatController</code> phụ thuộc vào, đối chiếu từng dòng code. Không có gì ngoài danh sách này.</p>
+
+  <h4>Request — những gì GCS gửi</h4>
+  <pre class="code">POST /v1/messages
+x-api-key: &lt;key&gt;                    <span style="color:var(--ink-3)">// :680 — endpoint cục bộ có thể bỏ qua</span>
+anthropic-version: 2023-06-01       <span style="color:var(--ink-3)">// :681 — bỏ qua</span>
+Content-Type: application/json
+
+{
+  "model":      "claude-sonnet-4-5-20250929",   <span style="color:var(--ink-3)">// :708 — bỏ qua hoặc log</span>
+  "max_tokens": 4096,                            <span style="color:var(--ink-3)">// :709 — TÔN TRỌNG</span>
+  "system": [                                    <span style="color:var(--ink-3)">// :732 — luôn là mảng</span>
+    { "type": "text", "text": "...",
+      "cache_control": {"type": "ephemeral"} },  <span style="color:var(--ink-3)">// :720 — bỏ qua</span>
+    { "type": "text", "text": "..." }            <span style="color:var(--ink-3)">// dynamic, có thể vắng</span>
+  ],
+  "messages": [                                  <span style="color:var(--ink-3)">// :733</span>
+    { "role": "user",      "content": "..." },   <span style="color:var(--ink-3)">// content LUÔN là chuỗi,</span>
+    { "role": "assistant", "content": "..." }    <span style="color:var(--ink-3)">// không bao giờ là mảng block</span>
+  ]
+}</pre>
+
+  <h4>Response — những gì GCS đọc</h4>
+  <pre class="code"><span style="color:var(--ink-3)">// Thành công — :912, :919–925</span>
+{ "content": [ { "type": "text", "text": "&lt;object JSON dạng chuỗi&gt;" } ] }
+
+<span style="color:var(--ink-3)">// Lỗi — :862–871, chỉ đọc khi HTTP status là lỗi</span>
+{ "error": { "message": "..." } }</pre>
+
+  <div class="note">
+    <p><b>Chỉ vậy thôi.</b> Gateway cục bộ đọc đúng 4 trường và trả đúng 1 cấu trúc. Không cần: <code>tools</code>, <code>tool_choice</code>, <code>tool_use</code>, <code>tool_result</code>, <code>stop_reason</code>, <code>stop_sequence</code>, <code>usage</code>, <code>id</code>, <code>type</code>, <code>role</code>, <code>model</code> trong response, streaming SSE, content block nhiều phần tử, hình ảnh, <code>temperature</code>, <code>top_p</code>, <code>top_k</code>, hay prompt caching thật.</p>
+    <p>Parser lấy phần tử <code>type=="text"</code> <em>đầu tiên</em> rồi <code>break</code> (<code>:919–925</code>), nên gateway chỉ cần trả một phần tử.</p>
+  </div>
+
+  <h4>Gateway tối thiểu — đủ cho Phase 3</h4>
+  <pre class="code">from fastapi import FastAPI
+app = FastAPI()
+
+@app.post("/v1/messages")
+async def messages(req: dict):
+    system = "\n\n".join(b["text"] for b in req.get("system", []))
+    msgs   = req["messages"]
+    text   = await run_llm(system, msgs, req.get("max_tokens", 4096))
+    return {"content": [{"type": "text", "text": text}]}</pre>
+
+  <p>Đó là toàn bộ hợp đồng. Việc thay đổi phía GCS gói gọn trong: URL lấy từ Fact thay vì hằng số, và header auth chọn theo provider. Ước tính <b>dưới 60 dòng C++ thay đổi</b> cho Phase&nbsp;1.</p>
+
+  <h4>Hai điểm cần xử lý ở gateway</h4>
+  <ul>
+    <li><b>Khớp vai trò.</b> Lịch sử hiện tại có thể bắt đầu bằng <code>assistant</code> hoặc chứa hai <code>user</code> liên tiếp (vì message hệ thống bị lọc bỏ ở <code>:689</code>). Anthropic thật chấp nhận; llama.cpp với chat template nghiêm ngặt thì không. Gateway phải chuẩn hóa: gộp các lượt cùng vai trò, đảm bảo bắt đầu bằng <code>user</code>.</li>
+    <li><b>Timeout.</b> <code>createRequest()</code> đặt transfer timeout 30 giây. Sinh 120 token trên Pi CPU có thể mất 15–25 giây, cộng prefill thì vượt ngưỡng. Cần thêm Fact <code>requestTimeoutSec</code> ở Phase&nbsp;1 — nếu không, Phase&nbsp;4 sẽ thất bại vì lý do không liên quan gì đến mô hình.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════ 9 ══════════════════ -->
+<section id="s9">
+  <h2><span class="num">09</span>Kiến trúc Raspberry Pi</h2>
+
+  <div class="diagram">Raspberry Pi 5 (8 GB hoặc 16 GB) · Pi OS 64-bit Bookworm
+│
+├─ <b>ai-gateway.service</b>        FastAPI + uvicorn, cổng 8080
+│  ├ POST /v1/messages          <span class="c">tương thích Anthropic subset</span>
+│  ├ POST /v1/audio/transcriptions  <span class="c">tương thích OpenAI</span>
+│  ├ GET  /healthz              <span class="c">cho watchdog GCS</span>
+│  ├ chuẩn hoá vai trò message
+│  ├ ghép prompt + kết quả RAG
+│  └ log JSONL có xoay vòng     <span class="c">phục vụ eval ngoại tuyến</span>
+│
+├─ <b>llama-server.service</b>      llama.cpp, cổng 8081 (chỉ localhost)
+│  ├ Qwen2.5-3B-Instruct Q4_K_M   <span class="c">~1,9 GB</span>
+│  ├ --grammar actions.gbnf       <span class="c">ép cấu trúc JSON</span>
+│  ├ --ctx-size 4096
+│  └ --keep / slot tái dùng KV    <span class="c">giữ prefix prompt</span>
+│
+├─ <b>whisper-server.service</b>    whisper.cpp, cổng 8082 (chỉ localhost)
+│  └ ggml-base hoặc ggml-small    <span class="c">int8/Q5</span>
+│
+├─ <b>knowledge/</b>                cho RAG
+│  ├ chunks.db                    <span class="c">sqlite + sqlite-vec</span>
+│  └ embed: all-MiniLM-L6 ONNX    <span class="c">~90 MB</span>
+│
+└─ <b>Bề mặt hệ thống</b>
+   ├ chỉ nghe trên interface Ethernet, không nghe Wi-Fi/WAN
+   ├ chạy dưới user không đặc quyền, không sudo
+   ├ không có client MAVLink cài đặt
+   ├ không có khóa riêng nào
+   ├ systemd watchdog + Restart=always
+   └ rootfs read-only (production)</div>
+
+  <h3>Ngân sách tài nguyên</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Thành phần</th><th>RAM</th><th>Đĩa</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td>Trọng số LLM 3B Q4_K_M</td><td>~1,9 GB</td><td>~1,9 GB</td><td>mmap nên dùng chung page cache</td></tr>
+      <tr><td>KV cache @ 4k ctx</td><td>~0,4 GB</td><td>—</td><td>Tăng tuyến tính theo context</td></tr>
+      <tr><td>whisper base</td><td>~0,3 GB</td><td>~150 MB</td><td><code>small</code> cần ~1 GB / 500 MB</td></tr>
+      <tr><td>Embedding + sqlite-vec</td><td>~0,2 GB</td><td>~150 MB</td><td>Chỉ khi bật RAG</td></tr>
+      <tr><td>Gateway + Python</td><td>~0,2 GB</td><td>~300 MB</td><td></td></tr>
+      <tr><td><b>Tổng</b></td><td><b>~3,0 GB</b></td><td><b>~2,5 GB</b></td><td>Pi 5 8 GB là đủ thoải mái</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Khuyến nghị phần cứng bổ trợ: <b>NVMe qua HAT PCIe</b> quan trọng hơn accelerator. Nạp 1,9 GB trọng số từ thẻ microSD mất khoảng 20–40 giây lúc khởi động; từ NVMe chỉ vài giây. Thêm <b>tản nhiệt chủ động</b> — Pi 5 sẽ throttle khi inference chạy liên tục, và throttle biểu hiện thành độ trễ tăng dần chứ không phải lỗi rõ ràng.</p>
+</section>
+
+<!-- ══════════════════ 10 ══════════════════ -->
+<section id="s10">
+  <h2><span class="num">10</span>Lựa chọn mô hình cục bộ</h2>
+
+  <p>Mục tiêu không phải tái tạo Claude Sonnet. Bài toán bị ràng buộc rất chặt: 22 action, tham số có kiểu rõ ràng, đầu ra JSON có grammar ép, tri thức miền cố định. Đó là bài toán <em>phân loại ý định kèm trích xuất tham số</em> được khoác áo hội thoại — vừa tầm mô hình nhỏ.</p>
+
+  <h3>So sánh nền tảng tính toán</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Nền tảng</th><th>Thực tế với LLM văn bản</th><th>Đánh giá</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Pi 5 CPU</b><br><span style="font-size:12px;color:var(--ink-3)">4× A76 @ 2,4 GHz</span></td>
+        <td>Decode bị giới hạn bởi băng thông bộ nhớ (~17 GB/s thực tế). Ước tính: 1,5B Q4 ≈ 10–15 tok/s; 3B Q4 ≈ 5–8 tok/s. Prefill ≈ 60–120 tok/s.</td>
+        <td><b>Điểm khởi đầu được khuyến nghị.</b> Với prompt rút gọn (~1.200 token) và đầu ra JSON (~100 token): ước tính <b>4–8 giây</b> mỗi lượt. Chấp nhận được cho chat, hơi chậm cho thoại.</td>
+      </tr>
+      <tr>
+        <td><b>Pi 5 + AI HAT+</b><br><span style="font-size:12px;color:var(--ink-3)">Hailo-8L 13 TOPS / Hailo-8 26 TOPS</span></td>
+        <td>Toolchain Hailo được thiết kế cho đồ thị dataflow tĩnh — CNN thị giác. LLM tự hồi quy có shape động và KV cache, không phải đường dẫn hạng nhất. <b>Không có tích hợp llama.cpp dạng cắm-là-chạy.</b></td>
+        <td><b>Không tăng tốc LLM văn bản một cách đáng kể.</b> Giá trị thật nằm ở: tăng tốc encoder Whisper, và mô hình thị giác sau này (phát hiện vật thể từ video UAV). Mua vì lý do đó, không vì LLM.</td>
+      </tr>
+      <tr>
+        <td><b>"AI HAT+ 2"</b></td>
+        <td><b>Tôi không xác nhận được sản phẩm mang đúng tên này tồn tại</b> tính đến thời điểm audit — đừng lập kế hoạch dựa trên thông số tôi không kiểm chứng được. Nếu một bản kế nhiệm dùng Hailo-10H (mà Hailo định vị cho generative AI, có DRAM trên module), tình hình sẽ khác.</td>
+        <td><b>Đánh giá có điều kiện.</b> Trước khi mua, yêu cầu một benchmark công khai chạy đúng lớp mô hình bạn cần. Nếu không có, coi như chưa hỗ trợ.</td>
+      </tr>
+      <tr>
+        <td><b>Lối thoát: x86 mini-PC hoặc Jetson Orin Nano</b></td>
+        <td>Orin Nano Super có GPU CUDA và llama.cpp chạy tốt; mini-PC x86 với iGPU chạy Vulkan/SYCL. Cả hai đều nhanh hơn Pi một bậc.</td>
+        <td><b>Giữ trong túi.</b> Nếu đo được p95 &gt; 10 giây sau khi đã tối ưu prompt, đổi nền tảng rẻ hơn nhiều so với đấu tranh với Pi.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><b>Nguyên tắc:</b> không mua accelerator trước khi đo. Phase&nbsp;4 phải tạo ra số liệu p50/p95 thật trên CPU. Chỉ số đó mới quyết định có cần phần cứng thêm hay không — và nó nhiều khả năng cho thấy nút thắt nằm ở <em>độ dài prompt</em>, thứ mà phần cứng không sửa được.</p>
+  </div>
+
+  <h3>Ứng viên mô hình</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Mô hình</th><th>Q4_K_M</th><th>Vì sao phù hợp</th></tr></thead>
+    <tbody>
+      <tr><td><b>Qwen2.5-3B-Instruct</b></td><td>~1,9 GB</td><td><b>Lựa chọn khởi đầu.</b> Tuân thủ chỉ dẫn tốt ở kích cỡ nhỏ, sinh JSON ổn định, hỗ trợ tiếng Việt khá — quan trọng nếu người dùng ra lệnh bằng tiếng Việt.</td></tr>
+      <tr><td>Qwen2.5-1.5B-Instruct</td><td>~1,0 GB</td><td>Phương án dự phòng khi 3B quá chậm. Với grammar, chênh lệch chất lượng nhỏ hơn dự kiến ở bài toán hẹp này.</td></tr>
+      <tr><td>Llama-3.2-3B-Instruct</td><td>~2,0 GB</td><td>Hành vi tool-calling tốt; tiếng Việt yếu hơn Qwen.</td></tr>
+      <tr><td>Gemma-3-4B-it</td><td>~2,6 GB</td><td>Chất lượng cao hơn, chậm hơn rõ rệt trên Pi.</td></tr>
+      <tr><td>Phi-4-mini (3,8B)</td><td>~2,4 GB</td><td>Mạnh về đầu ra có cấu trúc; kiểm chứng tiếng Việt trước khi chọn.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Phân chia LLM / code deterministic</h3>
+  <p>Đây là lằn ranh quan trọng nhất của toàn bộ thiết kế.</p>
+  <div class="tw">
+  <table>
+    <thead><tr><th>LLM làm</th><th>Code deterministic làm</th></tr></thead>
+    <tbody>
+      <tr><td>Ánh xạ "lên cao chút nữa" → <code>change_altitude</code></td><td>Quyết định <code>change_m: 10</code> có nằm trong biên cho phép</td></tr>
+      <tr><td>Ánh xạ "bay tới POI 3" → <code>goto</code> + tọa độ</td><td>Kiểm tra tọa độ trong geofence và trong tầm</td></tr>
+      <tr><td>Chọn Autoland thay vì rtl cho plane</td><td>Kiểm tra tên mode tồn tại trong firmware này</td></tr>
+      <tr><td>Giải thích Q_ASSIST_SPEED là gì</td><td>Đọc giá trị thật từ <code>ParameterManager</code></td></tr>
+      <tr><td>Tóm tắt telemetry thành câu</td><td>Cung cấp số liệu telemetry</td></tr>
+      <tr><td>Hỏi lại khi câu lệnh mơ hồ</td><td>Từ chối mọi action không qua được policy</td></tr>
+      <tr><td>Đề xuất thứ tự các bước</td><td>Thực thi tuần tự, phát hiện hoàn thành, xử lý lỗi</td></tr>
+      <tr><td>—</td><td>GPS, EKF, pin, armed, mode, tần suất, allowlist</td></tr>
+      <tr><td>—</td><td>Gửi MAVLink, quản lý khóa bí mật</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Quy tắc rút gọn: <b>LLM đề xuất, code quyết định.</b> Nếu một kiểm tra an toàn có thể viết thành <code>if</code>, nó không được phép sống trong prompt.</p>
+</section>
+
+<!-- ══════════════════ 11 ══════════════════ -->
+<section id="s11">
+  <h2><span class="num">11</span>Chiến lược tri thức / RAG</h2>
+
+  <p>Prompt tĩnh hiện tại là 38.217 ký tự ≈ 9.500 token, gồm 9 mục kiến thức (K1–K9) về flight mode ArduCopter, tham số ArduPlane, QuadPlane, MAVLink, hành vi bay, servo, quy đổi đơn vị. Với Claude + prompt caching, chi phí không đáng kể. Với Pi, đó là ràng buộc chặn đường.</p>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Phương án</th><th>Đánh giá cho triển khai cục bộ</th></tr></thead>
+    <tbody>
+      <tr><td><b>A.</b> Giữ nguyên prompt lớn</td><td><span class="tag t-danger">Loại</span> ~9,5k token prefill trên Pi CPU ≈ 25–60 giây cho request lạnh, và KV cache lớn. Không khả thi.</td></tr>
+      <tr><td><b>B.</b> Knowledge base tĩnh rút gọn</td><td><span class="tag t-keep">Nền tảng</span> Giữ ~1.200 token: schema JSON, 22 action kèm tham số, quy tắc mode, khác biệt copter/plane/VTOL. Đây là phần <em>luôn</em> cần.</td></tr>
+      <tr><td><b>C.</b> RAG</td><td><span class="tag t-keep">Bổ sung</span> K1–K9 chuyển thành chunk có index. Chỉ nạp khi người dùng hỏi về tham số/hành vi. Đa số câu lệnh điều khiển không cần chunk nào.</td></tr>
+      <tr><td><b>D.</b> Fine-tune / LoRA</td><td><span class="tag t-danger">Chưa</span> Cần bộ dữ liệu chưa tồn tại, cần pipeline huấn luyện, và khóa cứng vào một phiên bản mô hình. Chỉ xét lại nếu grammar + prompt rút gọn vẫn không đạt ngưỡng chính xác sau Phase&nbsp;5.</td></tr>
+      <tr><td><b>E.</b> Lai B + C + state deterministic</td><td><span class="tag t-keep">Khuyến nghị</span> Đúng như giả thuyết trong đề bài.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ngân sách prompt cho mô hình cục bộ</h3>
+  <div class="diagram">┌────────────────────────────────────────────┬──────────┬────────┐
+│ Thành phần                                 │   Token  │ Nguồn  │
+├────────────────────────────────────────────┼──────────┼────────┤
+│ Schema JSON + quy tắc đầu ra               │   ~250   │ tĩnh   │
+│ 22 action + tham số (bảng nén)             │   ~550   │ tĩnh   │
+│ Quy tắc mode + khác biệt loại máy bay      │   ~350   │ tĩnh   │
+│ Trạng thái xe hiện tại                     │   ~180   │ <span class="t">GCS</span>    │
+│ Danh sách POI                              │  0–100   │ <span class="t">GCS</span>    │
+│ Lịch sử hội thoại (4 lượt)                 │  ~250    │ <span class="t">GCS</span>    │
+│ Chunk RAG (chỉ khi là câu hỏi tri thức)    │  0–700   │ <span class="u">RAG</span>    │
+├────────────────────────────────────────────┼──────────┼────────┤
+│ Điển hình — câu lệnh điều khiển            │ <b>~1.580</b> │        │
+│ Xấu nhất — câu hỏi tri thức                │ <b>~2.380</b> │        │
+└────────────────────────────────────────────┴──────────┴────────┘
+   so với ~9.500 + động của bản cloud hiện tại</div>
+
+  <p>Phần tĩnh (~1.150 token) đứng đầu prompt và không đổi giữa các request, nên llama.cpp có thể tái dùng KV cache prefix qua cơ chế slot. Sau lượt đầu tiên, prefill thực tế chỉ còn phần động — đây là lý do thứ tự ghép prompt quan trọng: <b>tĩnh trước, động sau</b>, đúng như bản cloud đang làm với <code>cache_control</code>.</p>
+
+  <h3>Đường di trú</h3>
+  <ol>
+    <li>Giữ nguyên <code>AISystemPrompt.h</code>/<code>AIKnowledgeBase.h</code> cho đường cloud — không đụng vào.</li>
+    <li>Thêm <code>AISystemPromptCompact.h</code>: phần B, viết cho mô hình nhỏ — câu ngắn, bảng thay vì văn xuôi, không ví dụ dài.</li>
+    <li>GCS chọn prompt theo Fact <code>aiProvider</code>. Một dòng <code>if</code>.</li>
+    <li>Tách K1–K9 thành file Markdown trong repo Pi, chia chunk theo tiêu đề mục, index bằng sqlite-vec.</li>
+    <li>Gateway phân loại: câu có chứa action → bỏ qua RAG; câu hỏi tri thức → truy xuất 2–3 chunk.</li>
+  </ol>
+
+  <div class="note">
+    <p><b>Lưu ý duy trì:</b> tri thức khi đó tồn tại ở hai nơi — header C++ (cloud) và Markdown (Pi). Chọn một nguồn chân lý. Đề xuất: chuyển sang Markdown làm nguồn, sinh header C++ bằng script lúc build. Việc này cũng giải quyết luôn hạn chế 16.380 ký tự của MSVC đang buộc phải chia <code>kAIKnowledgeBase1/2/3</code> thủ công.</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 12 ══════════════════ -->
+<section id="s12">
+  <h2><span class="num">12</span>Chiến lược giọng nói / STT</h2>
+
+  <p>Đây là phần dễ nhất trong toàn bộ lộ trình, vì lựa chọn định dạng hiện tại đã vô tình đúng.</p>
+
+  <h3>Hiện trạng</h3>
+  <ul>
+    <li><code>_startAudioRecording()</code> ghi <b>WAV 16 kHz mono</b> qua <code>QMediaRecorder</code> — chính xác là định dạng Whisper muốn (<code>:1568–1572</code>).</li>
+    <li><code>_sendAudioToWhisper()</code> POST multipart tới <code>api.groq.com/openai/v1/audio/transcriptions</code>, field <code>file</code> + <code>model</code>, đọc <code>response["text"]</code> (<code>:1622–1712</code>).</li>
+    <li>TTS dùng <code>AudioOutput::instance()->say()</code> — Qt TextToSpeech, <b>đã chạy offline trên máy GCS</b>.</li>
+  </ul>
+
+  <h3>Vì sao chuyển đổi gần như miễn phí</h3>
+  <p><code>whisper.cpp</code> đi kèm <code>whisper-server</code> phơi ra <b>đúng endpoint OpenAI-compatible đó</b>, nhận đúng multipart đó, trả đúng <code>{"text": "..."}</code> đó. Toàn bộ thay đổi phía C++ là:</p>
+  <ul>
+    <li>URL <code>:1665</code> → lấy từ Fact <code>sttEndpointUrl</code></li>
+    <li>Header <code>Authorization</code> → chỉ gắn khi có key</li>
+    <li><code>voiceInputAvailable()</code> <code>:1453</code> → hiện yêu cầu <code>groqApiKey</code> không rỗng; endpoint cục bộ không cần key, nên điều kiện phải đổi thành "đã cấu hình endpoint"</li>
+    <li>Tên model <code>:1661</code> → lấy từ Fact</li>
+  </ul>
+
+  <div class="diagram">Micro <span class="c">(máy GCS)</span>
+   │  QMediaRecorder · WAV 16 kHz mono          <span class="t">giữ nguyên</span>
+   ▼
+POST /v1/audio/transcriptions <span class="c">multipart</span>
+   │
+   ├─ hôm nay:  <span class="u">api.groq.com</span>        whisper-large-v3-turbo
+   └─ sau này:  <span class="u">pi.local:8080</span>       whisper.cpp ggml-small
+   │
+   ▼  {"text": "cất cánh lên 30 mét"}
+voiceInputReceived → sendMessage()              <span class="t">giữ nguyên</span>
+   │
+   ▼
+LLM cục bộ → JSON actions
+   │
+   ▼
+<span class="t">AICommandPolicy → hàng đợi → MAVLink</span>          <span class="t">giữ nguyên</span>
+   │
+   ▼
+<span class="t">AudioOutput::say()</span> <span class="c">Qt TTS — vốn đã cục bộ, không đụng</span></div>
+
+  <h3>Cân nhắc mô hình Whisper</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Mô hình</th><th>RAM</th><th>Tốc độ trên Pi 5 CPU</th><th>Ghi chú</th></tr></thead>
+    <tbody>
+      <tr><td><code>ggml-base</code></td><td>~300 MB</td><td>Nhanh, khoảng thời gian thực với clip ngắn</td><td>Tiếng Anh tốt; tiếng Việt yếu</td></tr>
+      <tr><td><code>ggml-small</code></td><td>~1 GB</td><td>Chậm hơn 2–3 lần</td><td><b>Cần thiết nếu ra lệnh bằng tiếng Việt</b></td></tr>
+      <tr><td><code>ggml-medium</code></td><td>~2,6 GB</td><td>Quá chậm trên CPU</td><td>Chỉ khả thi nếu có accelerator</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>Đây là chỗ AI HAT+ có giá trị thật: encoder Whisper là một mạng tuyến tính tĩnh, đúng loại đồ thị mà Hailo tăng tốc tốt. Nếu tiếng Việt yêu cầu <code>small</code>/<code>medium</code>, accelerator có thể biện minh được — nhưng vì STT, không vì LLM.</p>
+</section>
+
+<!-- ══════════════════ 13 ══════════════════ -->
+<section id="s13">
+  <h2><span class="num">13</span>Kiến trúc bảo mật</h2>
+
+  <p>Nguyên tắc: <b>Pi là thiết bị không tin cậy nằm trên mạng cục bộ.</b> Nó chỉ có thể tạo ra <em>đề xuất văn bản</em>. Nó không thể làm gì với UAV mà GCS không tự nguyện chấp thuận.</p>
+
+  <div class="diagram">            ╔═══════════════════════════════════════╗
+            ║   <span class="u">VÙNG KHÔNG TIN CẬY — Raspberry Pi</span>   ║
+            ║                                       ║
+            ║   STT · LLM · RAG · AI Gateway        ║
+            ║                                       ║
+            ║   Có thể: sinh JSON bất kỳ            ║
+            ║   Có thể: bị prompt injection          ║
+            ║   Có thể: bị chiếm quyền hoàn toàn     ║
+            ║                                       ║
+            ║   <span class="d">Không có: khóa FC, khóa ZFCM,</span>       ║
+            ║   <span class="d">SE050, socket MAVLink, tài khoản</span>    ║
+            ╚═══════════════════╤═══════════════════╝
+                                │
+                  API có cấu trúc, đã xác thực
+                  <span class="c">chỉ JSON, không có kênh điều khiển</span>
+                                │
+            ╔═══════════════════▼═══════════════════╗
+            ║   <span class="t">VÙNG CÓ THẨM QUYỀN — ZoneFly GCS</span>   ║
+            ║                                       ║
+            ║   <span class="t">AICommandPolicy</span>   xác thực + biên    ║
+            ║   <span class="t">Phân bậc T1/T2/T3</span> xác nhận của người║
+            ║   <span class="t">_actionQueue</span>      tuần tự hóa        ║
+            ║   <span class="t">MAVLink / ZFCM</span>    thực thi cuối cùng ║
+            ║                                       ║
+            ║   Giả định: mọi thứ từ Pi là thù địch ║
+            ╚═══════════════════╤═══════════════════╝
+                                │
+                               UAV</div>
+
+  <h3>Prototype vs Production</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Mối đe doạ</th><th>Prototype (Phase 3–6)</th><th>Production (Phase 8+)</th></tr></thead>
+    <tbody>
+      <tr><td>Nghe lén mạng</td><td>HTTP trên LAN Ethernet riêng, cách ly vật lý</td><td>TLS với CA riêng; mTLS nếu Pi nằm trên mạng dùng chung</td></tr>
+      <tr><td>Client trái phép gọi Pi</td><td>Bind vào IP interface Ethernet, firewall theo nguồn</td><td>Bearer token từ config; mTLS</td></tr>
+      <tr><td>Pi trả JSON dị dạng</td><td><span class="tag t-keep">Có sẵn</span> Parser đã xử lý; grammar khiến gần như không xảy ra</td><td>Ghi log và cảnh báo mọi lần từ chối</td></tr>
+      <tr><td>Pi trả action hợp lệ nhưng sai</td><td><b>AICommandPolicy (Phase 2)</b> — đây là biện pháp chính</td><td>Thêm giới hạn tần suất và nhật ký kiểm toán</td></tr>
+      <tr><td>Prompt injection qua <code>customContext</code> hoặc tên POI</td><td>Chấp nhận rủi ro — policy layer chặn hậu quả</td><td>Làm sạch input; phân tách rõ nội dung người dùng trong prompt</td></tr>
+      <tr><td>Ngập lệnh</td><td>Giới hạn tự nhiên: <code>_isProcessing</code> cho phép một request tại một thời điểm</td><td>Giới hạn action mỗi phút trong policy</td></tr>
+      <tr><td>Replay</td><td>Không cần — lệnh vẫn phải qua policy và (với T2) qua người</td><td>Nonce + timestamp nếu có yêu cầu tuân thủ</td></tr>
+      <tr><td>Pi bị chiếm quyền hoàn toàn</td><td><b>Đã được kiến trúc xử lý.</b> Kẻ tấn công chỉ có thể đề xuất action, vẫn bị policy chặn và T2/T3 vẫn cần người bấm.</td><td>Rootfs read-only, khởi động có xác minh, xoay vòng khóa</td></tr>
+      <tr><td>Pi offline / treo</td><td>Timeout hiển thị lỗi trong chat</td><td>Watchdog <code>/healthz</code>; tự chuyển về Claude nếu có mạng; hỏi trước khi chuyển</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note">
+    <p><b>Nhận xét quan trọng:</b> vì đã có <code>AICommandPolicy</code> ở phía GCS, tình huống "Pi bị chiếm quyền hoàn toàn" không phải thảm hoạ — nó tương đương với "mô hình ảo giác liên tục". Cùng một hàng rào xử lý cả hai. Đó chính là lý do policy layer là khoản đầu tư bảo mật đáng giá nhất, và là lý do nó không nên bị đẩy xuống Phase&nbsp;7.</p>
+  </div>
+</section>
+
+<!-- ══════════════════ 14 ══════════════════ -->
+<section id="s14">
+  <h2><span class="num">14</span>Lộ trình theo giai đoạn</h2>
+
+  <p>Mười giai đoạn. Khác biệt so với cấu trúc trong đề bài: <b>lớp an toàn được đưa lên Phase&nbsp;2</b>, trước khi mô hình cục bộ xuất hiện; và <b>STT cục bộ được đẩy lên trước RAG</b> vì nó rẻ và mang lại giá trị người dùng thấy được ngay.</p>
+
+  <!-- Phase 0 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>0</div>
+    <div>
+      <h3>Audit &amp; bộ test chuẩn</h3>
+      <p class="phase-goal">Biến hành vi hiện tại thành thứ đo được, để mọi thay đổi sau đó có thang đối chiếu.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-low">Thấp</b></div>
+        <div><span>Phụ thuộc</span><b>Không</b></div>
+        <div><span>Thành phần mới</span><b>Chỉ tài liệu/test</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Thu thập <b>bộ chuẩn 40–60 cặp</b> (câu người dùng → JSON mong đợi) từ hệ thống Claude hiện tại: 25 lệnh một bước, 15 lệnh nhiều bước, 10 câu hỏi tri thức, 5 câu mơ hồ cần hỏi lại. Bao gồm tiếng Việt nếu người dùng sẽ dùng tiếng Việt.</li>
+        <li>Thêm cờ logging ghi từng cặp request/response ra JSONL để thu thập bán tự động.</li>
+        <li>Thêm <code>AIKnowledgeBase.h</code> vào <code>src/AI/CMakeLists.txt</code> (đang thiếu).</li>
+        <li>Viết tài liệu ma trận action → API <code>Vehicle</code> → lệnh MAVLink.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Bộ chuẩn nằm trong repo dưới dạng JSON, chạy được bằng script chấm điểm ngoại tuyến.</li>
+        <li>Đường cloud hiện tại đạt điểm cơ sở ≥ 95% trên bộ chuẩn — con số này là mốc so sánh cho mọi mô hình cục bộ.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> bỏ qua giai đoạn này. Không có bộ chuẩn thì "mô hình cục bộ có đủ tốt không" trở thành tranh luận cảm tính, và Phase&nbsp;4 sẽ không có điều kiện kết thúc.</div>
+    </div>
+  </div>
+
+  <!-- Phase 1 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>1</div>
+    <div>
+      <h3>Endpoint và model thành cấu hình</h3>
+      <p class="phase-goal">Gỡ URL, tên model và kiểu xác thực khỏi mã cứng. Không thay đổi hành vi khi giữ giá trị mặc định.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-low">Thấp</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 0</b></div>
+        <div><span>Thành phần mới</span><b>4 Fact</b></div>
+      </div>
+      <h4>File bị ảnh hưởng</h4>
+      <ul>
+        <li><code>src/Settings/AI.SettingsGroup.json</code> — thêm <code>aiProvider</code> (enum cloud/local), <code>localEndpointUrl</code>, <code>modelName</code>, <code>requestTimeoutSec</code></li>
+        <li><code>src/Settings/AISettings.h</code> — 4 <code>DEFINE_SETTINGFACT</code></li>
+        <li><code>src/AI/AIChatController.cc</code> — <code>_sendToClaudeAPI()</code>: URL từ Fact, model từ Fact, header auth theo provider, <code>RequestConfig{.timeoutMs=...}</code></li>
+        <li><code>src/UI/AppSettings/AISettings.qml</code> — combo chọn provider, ô nhập endpoint (chỉ hiện khi chọn local)</li>
+        <li><code>src/FlyView/AIChatWidget.qml</code> — điều kiện cảnh báo đổi từ "có claudeApiKey" sang "provider đã cấu hình"</li>
+      </ul>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Tách <code>_buildRequestBody()</code> ra khỏi <code>_sendToClaudeAPI()</code> — thuần túy, dễ unit test.</li>
+        <li>Tách <code>_parseWireResponse()</code> ra khỏi <code>_processAIResponse()</code> — bóc vỏ HTTP riêng, parse action riêng.</li>
+        <li><b>Không</b> tạo class provider. Xem lập luận ở mục 07.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Unit test cho <code>_buildRequestBody()</code> và <code>_parseWireResponse()</code> (theo <code>test/TESTING.md</code>, nhãn <code>Unit</code>).</li>
+        <li>Với cấu hình mặc định, request gửi đi <b>byte-identical</b> so với trước thay đổi.</li>
+        <li>Đổi <code>localEndpointUrl</code> sang <code>http://localhost:9999</code> phải tạo ra lỗi kết nối chứ không phải crash.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> thấp. Đây là thay đổi có thể ship độc lập, hữu ích ngay cả khi dự án Pi bị hoãn.</div>
+    </div>
+  </div>
+
+  <!-- Phase 2 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>2</div>
+    <div>
+      <h3>Lớp Safety &amp; Policy <span style="color:var(--danger);font-size:14px">★ đảo lên trước</span></h3>
+      <p class="phase-goal">Chuyển các quy tắc an toàn từ prompt vào code, trước khi độ tin cậy của mô hình giảm xuống.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-med">Trung bình</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 0</b></div>
+        <div><span>Thành phần mới</span><b>AICommandPolicy</b></div>
+      </div>
+      <h4>Thành phần mới</h4>
+      <pre class="code">src/AI/AICommandPolicy.h / .cc
+
+struct PolicyVerdict {
+    enum Decision { Allow, RequireConfirmation, Reject };
+    Decision    decision;
+    QString     reason;        <span style="color:var(--ink-3)">// hiện trong chat khi từ chối</span>
+    QVariantMap correctedParams;  <span style="color:var(--ink-3)">// giá trị đã kẹp biên</span>
+};
+
+PolicyVerdict evaluate(const QString&amp; action,
+                       const QVariantMap&amp; params,
+                       const Vehicle* vehicle) const;</pre>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Xác thực schema: action nằm trong 22 lệnh đã biết, tham số bắt buộc có mặt, kiểu đúng, tham số lạ bị loại bỏ.</li>
+        <li>Kiểm tra biên, cấu hình qua Fact mới: <code>maxAltitudeM</code> (mặc định 120), <code>maxDistanceM</code> (mặc định 1000), <code>maxSpeedMps</code>, <code>maxWaitS</code>.</li>
+        <li>Kiểm tra trạng thái: GPS fix và EKF trước <code>arm</code>/<code>takeoff</code>; kiểm tra <code>flying()</code> trước lệnh Guided; chuẩn hoá heading.</li>
+        <li><b>Allowlist tham số</b> — tập tham số điều chỉnh bay được phép ghi; mọi tham số khác chuyển sang bậc T3.</li>
+        <li><b>Kiểm tra chức năng kênh servo</b> — đọc <code>SERVOn_FUNCTION</code>, từ chối nếu ≠ 0.</li>
+        <li>Mở rộng <code>_isDangerousCommand()</code> thành bảng bậc T1/T2/T3 theo mục 05.</li>
+        <li>Cắm policy vào <code>_processAIResponse()</code> trước khi tạo message, và vào <code>_executeVehicleCommand()</code> như lớp bảo vệ thứ hai.</li>
+        <li>Action bị từ chối vẫn hiện trong chat kèm lý do — người dùng phải thấy vì sao AI bị chặn.</li>
+      </ul>
+      <h4>Giữ nguyên</h4>
+      <ul><li>Hàng đợi, phát hiện hoàn thành, <code>_executeVehicleCommand()</code>, toàn bộ QML ngoài phần hiển thị lý do từ chối.</li></ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Unit test bảng: mỗi action × (hợp lệ, ngoài biên, thiếu tham số, sai kiểu, sai trạng thái xe).</li>
+        <li>Test SITL: <code>takeoff(altitude_m: 5000)</code> bị từ chối và hiển thị lý do; <code>set_parameter(ARMING_CHECK, 0)</code> yêu cầu xác nhận tường minh.</li>
+        <li>Bộ chuẩn Phase&nbsp;0 vẫn đạt ≥ 95% — policy không được từ chối nhầm lệnh hợp lệ.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> siết quá tay làm hỏng luồng đang dùng được. Giảm thiểu bằng cách đặt mọi biên vào Fact có giá trị mặc định rộng rãi, và log mọi lần từ chối để hiệu chỉnh.</div>
+    </div>
+  </div>
+
+  <!-- Phase 3 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>3</div>
+    <div>
+      <h3>Gateway giả lập trên Pi</h3>
+      <p class="phase-goal">Chứng minh vòng lặp mạng GCS ↔ Pi hoạt động, trước khi thêm biến số mô hình.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-low">Thấp</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 1</b></div>
+        <div><span>Thành phần mới</span><b>ai-gateway (Pi)</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>FastAPI phơi <code>POST /v1/messages</code> và <code>GET /healthz</code>.</li>
+        <li>Khớp mẫu tất định: chứa "cất cánh"/"takeoff" + số → trả JSON takeoff tương ứng. Khoảng 8 mẫu đủ cho MVP.</li>
+        <li>Chuẩn hoá vai trò message (gộp lượt trùng vai trò, đảm bảo bắt đầu bằng <code>user</code>).</li>
+        <li>Ghi mọi request ra JSONL — dữ liệu này dùng lại cho eval ở Phase&nbsp;5.</li>
+        <li>Unit systemd, bind vào IP Ethernet.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Đặt <code>aiProvider=local</code>, <code>localEndpointUrl=http://&lt;pi&gt;:8080</code>; gõ "cất cánh lên 30 mét"; hộp thoại xác nhận hiện lên; bấm xác nhận; SITL lên 30 m.</li>
+        <li>Tắt Pi → GCS hiện lỗi rõ ràng trong chat, không treo, không crash.</li>
+        <li>Đổi provider về cloud → hoạt động y như cũ.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> timeout 30 giây có thể đủ ở đây nhưng không đủ ở Phase&nbsp;4. Xác nhận Fact <code>requestTimeoutSec</code> hoạt động đúng ngay tại giai đoạn này.</div>
+    </div>
+  </div>
+
+  <!-- Phase 4 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>4</div>
+    <div>
+      <h3>LLM cục bộ + grammar</h3>
+      <p class="phase-goal">Thay câu trả lời giả lập bằng suy luận thật, với cấu trúc đầu ra được ép bằng grammar.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-high">Cao</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 2, 3</b></div>
+        <div><span>Thành phần mới</span><b>llama-server, GBNF, prompt rút gọn</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Biên dịch llama.cpp trên Pi 5 (bật NEON/dotprod), chạy <code>llama-server</code> chỉ trên localhost.</li>
+        <li>Viết <code>actions.gbnf</code> mã hoá đúng schema đầu ra: enum 22 action, tham số theo từng action, kiểu số/chuỗi/bool.</li>
+        <li>Viết <code>AISystemPromptCompact.h</code> (~1.150 token) — dạng bảng, không văn xuôi.</li>
+        <li>GCS chọn prompt theo <code>aiProvider</code> (một <code>if</code>).</li>
+        <li>Sắp xếp prompt: tĩnh trước, động sau, để llama.cpp tái dùng KV cache prefix.</li>
+        <li>Đo p50/p95 độ trễ với Qwen2.5-3B và 1.5B; ghi lại trong repo.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Chấm bộ chuẩn Phase&nbsp;0 tự động: <b>≥ 90%</b> trên lệnh một bước, <b>≥ 70%</b> trên lệnh nhiều bước.</li>
+        <li><b>0 lỗi JSON sai cú pháp</b> trên 200 lượt — grammar phải đảm bảo điều này.</li>
+        <li><b>0 action bị policy từ chối vì lý do schema</b> — grammar đã loại trừ khả năng đó.</li>
+        <li>p95 độ trễ <b>≤ 8 giây</b> với câu lệnh điều khiển.</li>
+        <li>Chạy liên tục 1 giờ không throttle làm p95 tăng quá 50%.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro chính:</b> lệnh nhiều bước. Mô hình nhỏ hay bỏ sót <code>set_flight_mode</code> đứng trước, hoặc sắp sai thứ tự <code>wait</code>/<code>async_wait</code>. <b>Giảm thiểu:</b> để policy layer tự chèn tiền điều kiện mode thay vì trông chờ mô hình — biến một lớp lỗi thành việc của code deterministic.</div>
+      <div class="risk"><b>Rủi ro thứ hai:</b> không đạt ngưỡng độ trễ. <b>Giảm thiểu:</b> hạ xuống 1.5B; nếu vẫn không đạt, chuyển nền tảng (mục 10) — đừng mua accelerator để cứu LLM văn bản.</div>
+    </div>
+  </div>
+
+  <!-- Phase 5 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>5</div>
+    <div>
+      <h3>Vòng phản hồi kết quả &amp; siết tool</h3>
+      <p class="phase-goal">Đóng vòng lặp giữa thực thi và mô hình — sửa lỗi <code>get_parameter</code> và giúp AI phục hồi sau lỗi.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-med">Trung bình</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 4</b></div>
+        <div><span>Thành phần mới</span><b>Thông điệp kết quả thực thi</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Khi hàng đợi kết thúc, ghép một message <code>user</code> tổng hợp kết quả: hoàn thành/thất bại từng action, giá trị trả về của <code>get_parameter</code>, lý do bị policy từ chối.</li>
+        <li>Tách <code>set_parameter</code> thành <code>set_tuning_parameter</code> (allowlist) và <code>set_parameter_advanced</code> (T3).</li>
+        <li>Gửi lại các <code>actions</code> có cấu trúc trong lịch sử, không chỉ chuỗi <code>message</code>.</li>
+        <li>Tăng cửa sổ lịch sử từ 11 message lên giới hạn theo token (mô hình cục bộ có ngân sách chặt hơn).</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>"RTL_ALT đang là bao nhiêu?" → AI trả đúng giá trị thật từ FC. <b>Hiện tại câu này không thể trả lời đúng.</b></li>
+        <li>Sau một action bị từ chối, AI đề xuất phương án thay thế hợp lệ thay vì lặp lại.</li>
+        <li>Bộ chuẩn không tụt điểm.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> lịch sử phình to ăn hết ngân sách context của mô hình nhỏ. Giảm thiểu: tóm tắt kết quả trong 1–2 dòng, không dán nguyên log.</div>
+    </div>
+  </div>
+
+  <!-- Phase 6 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>6</div>
+    <div>
+      <h3>STT cục bộ</h3>
+      <p class="phase-goal">Loại bỏ phụ thuộc cloud cuối cùng. Rẻ và người dùng thấy ngay.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-low">Thấp</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 3</b></div>
+        <div><span>Thành phần mới</span><b>whisper-server (Pi)</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Chạy <code>whisper-server</code> của whisper.cpp trên Pi; proxy qua gateway để chỉ mở một cổng.</li>
+        <li>Thêm Fact <code>sttEndpointUrl</code>, <code>sttModelName</code>; đổi <code>:1665</code> và <code>:1661</code>.</li>
+        <li>Sửa <code>voiceInputAvailable()</code> <code>:1453</code> — bỏ yêu cầu bắt buộc có Groq key.</li>
+        <li>Header <code>Authorization</code> chỉ gắn khi key không rỗng.</li>
+      </ul>
+      <h4>Giữ nguyên</h4>
+      <ul><li>Toàn bộ đường ghi âm, định dạng WAV, xử lý multipart, parse <code>{"text"}</code>, nút mic QML, và TTS.</li></ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Nói "cất cánh lên 30 mét" với Pi làm STT → text đúng → action đúng → xác nhận → SITL cất cánh.</li>
+        <li>Rút cáp mạng WAN — toàn bộ luồng thoại vẫn chạy. <b>Đây là bài test "hoàn toàn cục bộ".</b></li>
+        <li>Độ chính xác nhận dạng trên 20 câu lệnh mẫu ≥ 90% (chọn kích cỡ mô hình Whisper theo kết quả này).</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> tiếng Việt cần <code>ggml-small</code> trở lên, làm độ trễ thoại tăng. Đo trước khi cam kết kích cỡ mô hình.</div>
+    </div>
+  </div>
+
+  <!-- Phase 7 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>7</div>
+    <div>
+      <h3>RAG tri thức</h3>
+      <p class="phase-goal">Trả lại chiều sâu tri thức ArduPilot đã bị cắt ở Phase 4, mà không phải trả giá prefill.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-med">Trung bình</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 4</b></div>
+        <div><span>Thành phần mới</span><b>Chỉ số vector, bộ phân loại truy vấn</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Chuyển K1–K9 sang Markdown làm <b>nguồn chân lý duy nhất</b>; sinh header C++ bằng script lúc build (giải quyết luôn giới hạn 16.380 ký tự của MSVC).</li>
+        <li>Chia chunk theo tiêu đề mục, index bằng sqlite-vec + all-MiniLM-L6 ONNX.</li>
+        <li>Gateway phân loại truy vấn: câu điều khiển → bỏ qua RAG (giữ độ trễ thấp); câu hỏi tri thức → nạp 2–3 chunk.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>10 câu hỏi tri thức trong bộ chuẩn: độ chính xác ≥ 80%.</li>
+        <li>Độ trễ câu lệnh điều khiển <b>không tăng</b> — RAG không được kích hoạt cho câu có action.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> phân loại sai làm RAG chạy cho câu điều khiển, đội độ trễ. Giảm thiểu: mặc định bỏ qua RAG; chỉ bật khi có từ khoá tri thức rõ ràng.</div>
+    </div>
+  </div>
+
+  <!-- Phase 8 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>8</div>
+    <div>
+      <h3>Hardening bảo mật</h3>
+      <p class="phase-goal">Nâng từ mức prototype lên mức triển khai ngoài môi trường lab.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-med">Trung bình</b></div>
+        <div><span>Phụ thuộc</span><b>Phase 2, 6</b></div>
+        <div><span>Thành phần mới</span><b>TLS, token, giới hạn tần suất</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>TLS với CA riêng cho kênh GCS ↔ Pi; tận dụng <code>QGCNetworkHelper::loadCaCertificates()</code> và <code>applySslConfig()</code> đã có sẵn.</li>
+        <li>mTLS nếu Pi nằm trên mạng dùng chung — <code>loadClientCertAndKey()</code> đã có.</li>
+        <li>Bearer token cho gateway; Fact lưu trong settings.</li>
+        <li>Giới hạn tần suất trong <code>AICommandPolicy</code>: số action tối đa mỗi phút.</li>
+        <li>Nhật ký kiểm toán: mọi action được đề xuất, phán quyết policy, quyết định của người, kết quả thực thi.</li>
+        <li>Làm sạch <code>customContext</code> và tên POI trước khi ghép vào prompt.</li>
+        <li>Pi chạy user không đặc quyền, rootfs read-only, chỉ nghe trên interface Ethernet.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Gateway từ chối request không có token hợp lệ.</li>
+        <li>Gateway độc hại (trả action ngẫu nhiên vượt biên) không tạo ra được lệnh MAVLink nào.</li>
+        <li>Quét cổng trên Pi chỉ thấy cổng gateway.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> quản lý chứng chỉ ngoài thực địa. Giảm thiểu: tự sinh CA lúc cài đặt, hạn 10 năm, có quy trình thay thế bằng tay đã viết tài liệu.</div>
+    </div>
+  </div>
+
+  <!-- Phase 9 -->
+  <div class="phase">
+    <div class="phase-n"><small>PHASE</small>9</div>
+    <div>
+      <h3>Production</h3>
+      <p class="phase-goal">Đóng gói, tự khởi động, giám sát, cập nhật, phục hồi.</p>
+      <div class="pmeta">
+        <div><span>Độ phức tạp</span><b class="cx-med">Trung bình</b></div>
+        <div><span>Phụ thuộc</span><b>Tất cả</b></div>
+        <div><span>Thành phần mới</span><b>Image, watchdog, OTA</b></div>
+      </div>
+      <h4>Công việc</h4>
+      <ul>
+        <li>Image Pi OS dựng sẵn hoặc script cài đặt một lệnh; unit systemd với <code>Restart=always</code> và watchdog.</li>
+        <li>Poll <code>/healthz</code> từ GCS; chỉ báo trạng thái trong AIChatWidget (đã kết nối / độ trễ / model đang chạy).</li>
+        <li>Chuyển dự phòng: nếu Pi không phản hồi và có mạng, <b>hỏi</b> người dùng trước khi chuyển sang Claude — đừng tự động rời chế độ cục bộ.</li>
+        <li>Cập nhật OTA cho gateway và trọng số mô hình, có xác minh checksum và khả năng rollback.</li>
+        <li>Xoay vòng log; xuất số liệu độ trễ phục vụ phân tích ngoại tuyến.</li>
+        <li>Tài liệu vận hành: cấu hình mạng, IP tĩnh, quy trình xử lý sự cố.</li>
+      </ul>
+      <h4>Kiểm thử &amp; tiêu chí nghiệm thu</h4>
+      <ul>
+        <li>Mất điện đột ngột → Pi tự phục hồi và phục vụ được request trong vòng 90 giây.</li>
+        <li>Chạy liên tục 24 giờ, không rò rỉ bộ nhớ, p95 không trôi.</li>
+        <li>Chỉ báo trạng thái phản ánh đúng tình trạng thật của Pi.</li>
+      </ul>
+      <div class="risk"><b>Rủi ro:</b> thẻ microSD hỏng do ghi liên tục. Giảm thiểu: khởi động từ NVMe, rootfs read-only, log trên tmpfs có xoay vòng.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ 15 ══════════════════ -->
+<section id="s15">
+  <h2><span class="num">15</span>Định nghĩa MVP</h2>
+
+  <p class="lede">MVP trả lời đúng một câu hỏi: <em>ZoneFly GCS có thể dùng mô hình AI cục bộ trên Raspberry Pi thay cho Claude, mà vẫn giữ nguyên UI Titan AI, tool calling, hệ thống an toàn và logic điều khiển UAV hiện có không?</em></p>
+
+  <h3>Phạm vi — Phase 0 → 4</h3>
+  <div class="diagram">GCS <span class="c">(SITL ArduCopter)</span>
+ │  aiProvider = local
+ │  localEndpointUrl = http://192.168.1.50:8080
+ ▼
+Ethernet <span class="c">(LAN riêng, HTTP, chưa TLS)</span>
+ ▼
+Raspberry Pi 5
+ │  ai-gateway → llama-server
+ │  Qwen2.5-3B-Instruct Q4_K_M + actions.gbnf
+ │  prompt rút gọn ~1.150 token
+ ▼
+{"actions":[{"action":"set_flight_mode",...},
+            {"action":"arm",...},
+            {"action":"takeoff","parameters":{"altitude_m":30}}],
+ "message":"Cất cánh lên 30 mét.","confirmation_needed":true}
+ ▼
+<span class="t">AICommandPolicy</span>   <span class="c">schema ✓ biên ✓ trạng thái ✓ bậc T2</span>
+ ▼
+<span class="t">Hộp thoại xác nhận</span>  <span class="c">người bấm</span>
+ ▼
+<span class="t">_actionQueue</span>       <span class="c">tuần tự, polling 250 ms</span>
+ ▼
+<span class="t">MAVLink</span> → SITL lên đúng 30 m</div>
+
+  <h3>Nằm ngoài phạm vi MVP</h3>
+  <p>Giọng nói cục bộ, RAG, TLS, đóng gói production, vòng phản hồi kết quả, chuyển dự phòng tự động.</p>
+
+  <h3>Tiêu chí nghiệm thu</h3>
+  <div class="tw">
+  <table>
+    <thead><tr><th>Tiêu chí</th><th>Ngưỡng</th></tr></thead>
+    <tbody>
+      <tr><td>Lệnh một bước đúng ("cất cánh lên 30 mét")</td><td>≥ 90% trên 20 câu</td></tr>
+      <tr><td>Lệnh hai bước đúng ("cất cánh 30 m rồi bay tới waypoint 3")</td><td>≥ 70% trên 10 câu</td></tr>
+      <tr><td>JSON sai cú pháp</td><td>0 trên 200 lượt <span style="color:var(--ink-3)">(grammar đảm bảo)</span></td></tr>
+      <tr><td>Action vượt policy tới được MAVLink</td><td>0 — tuyệt đối</td></tr>
+      <tr><td>p95 độ trễ</td><td>≤ 8 giây</td></tr>
+      <tr><td>Thay đổi trong QML</td><td>0 dòng logic <span style="color:var(--ink-3)">(chỉ nhãn cấu hình)</span></td></tr>
+      <tr><td>Thay đổi trong <code>_executeVehicleCommand()</code></td><td>0 dòng</td></tr>
+      <tr><td>Thay đổi trong hàng đợi action</td><td>0 dòng</td></tr>
+      <tr><td>Đường cloud Claude</td><td>Vẫn hoạt động nguyên vẹn</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <p>Ba dòng cuối là điều kiện thành công thật sự: nếu MVP đòi hỏi sửa QML hay lớp thực thi lệnh, tức là lớp trừu tượng đã đặt sai chỗ.</p>
+</section>
+
+<!-- ══════════════════ 16 ══════════════════ -->
+<section id="s16">
+  <h2><span class="num">16</span>Mục tiêu production</h2>
+
+  <div class="tw">
+  <table>
+    <thead><tr><th>Khía cạnh</th><th>Mục tiêu</th></tr></thead>
+    <tbody>
+      <tr><td>Vận hành ngoại tuyến</td><td>Rút hoàn toàn kết nối WAN — chat, giọng nói, tri thức, điều khiển đều hoạt động</td></tr>
+      <tr><td>Độ trễ</td><td>p95 ≤ 6 giây với lệnh điều khiển; ≤ 10 giây với câu hỏi tri thức</td></tr>
+      <tr><td>Độ chính xác</td><td>≥ 95% lệnh một bước, ≥ 85% lệnh nhiều bước trên bộ chuẩn</td></tr>
+      <tr><td>An toàn</td><td>0 action vượt policy; mọi lệnh T2/T3 có bản ghi xác nhận của người</td></tr>
+      <tr><td>Khởi động</td><td>Pi phục vụ được request trong 90 giây sau khi cấp điện</td></tr>
+      <tr><td>Độ bền</td><td>Chạy 24 giờ không trôi hiệu năng; tự phục hồi sau mất điện</td></tr>
+      <tr><td>Bảo mật</td><td>TLS bắt buộc; Pi bị chiếm quyền không tạo được lệnh MAVLink nào</td></tr>
+      <tr><td>Cập nhật</td><td>OTA có checksum và rollback cho gateway lẫn trọng số mô hình</td></tr>
+      <tr><td>Khả năng quan sát</td><td>Chỉ báo trạng thái Pi trong UI; nhật ký kiểm toán mọi action</td></tr>
+      <tr><td>Cùng tồn tại</td><td>Đổi cloud ↔ cục bộ trong settings, không cần build lại</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ══════════════════ 17 ══════════════════ -->
+<section id="s17">
+  <h2><span class="num">17</span>Chưa nên xây gì</h2>
+
+  <p>Mỗi mục dưới đây là công sức có thể bỏ ra mà không đổi lại điều gì ở giai đoạn hiện tại.</p>
+
+  <ul class="dont">
+    <li><div>
+      <b>Hệ phân cấp <code>IAIProvider</code> / factory</b>
+      <span>Coupling đo được là 7 khóa JSON và 2 header. Một factory cho hai provider chỉ khác nhau ở URL và header auth là tầng gián tiếp không trả lại gì. Tách hai hàm là đủ. Nâng cấp khi xuất hiện định dạng wire thứ ba.</span>
+    </div></li>
+    <li><div>
+      <b>Anthropic tools API / <code>tool_use</code> / <code>tool_result</code></b>
+      <span>Code không dùng chúng. Thêm vào có nghĩa là vừa phải sửa GCS vừa phải mô phỏng định dạng phức tạp hơn ở gateway — nhiều việc hơn, cho cùng một kết quả. Đường JSON-in-text hiện tại kết hợp grammar còn <em>đáng tin cậy hơn</em> với mô hình nhỏ.</span>
+    </div></li>
+    <li><div>
+      <b>Streaming SSE</b>
+      <span>UI hiện hiển thị một message hoàn chỉnh sau khi có phản hồi, có sẵn chỉ báo đang gõ. Streaming đòi hỏi sửa QML, sửa parser, xử lý JSON từng phần — để rút ngắn thời gian cảm nhận vài giây. Hãy đo độ trễ thật trước; giảm độ dài prompt rẻ hơn nhiều.</span>
+    </div></li>
+    <li><div>
+      <b>Fine-tuning hoặc LoRA</b>
+      <span>Chưa có bộ dữ liệu. Grammar + prompt rút gọn nhiều khả năng đã đủ cho bài toán 22-action này. Chỉ xét lại nếu Phase&nbsp;5 chứng minh được là không đủ — và khi đó bộ chuẩn Phase&nbsp;0 sẽ nói rõ cần cải thiện bao nhiêu.</span>
+    </div></li>
+    <li><div>
+      <b>Mua AI HAT+ để tăng tốc LLM</b>
+      <span>Toolchain Hailo hướng CNN thị giác. Hãy đo trên CPU trước. Nếu vẫn chậm, nút thắt gần như chắc chắn là độ dài prompt hoặc kích cỡ mô hình — hai thứ mà accelerator này không sửa. Mua nó cho STT hoặc thị giác thì hợp lý.</span>
+    </div></li>
+    <li><div>
+      <b>Đưa TTS xuống Pi</b>
+      <span><code>AudioOutput::say()</code> đã chạy hoàn toàn offline trên máy GCS. Chuyển xuống Pi sẽ thêm độ trễ mạng và một dịch vụ phải bảo trì, để giải quyết một vấn đề không tồn tại.</span>
+    </div></li>
+    <li><div>
+      <b>mTLS ở giai đoạn prototype</b>
+      <span>Phase&nbsp;3–6 chạy trên LAN Ethernet cách ly. Quản lý chứng chỉ là công việc thật và sẽ làm chậm việc học điều quan trọng hơn: mô hình cục bộ có đủ tốt không. Đưa vào Phase&nbsp;8.</span>
+    </div></li>
+    <li><div>
+      <b>RAG trước khi đo prompt rút gọn</b>
+      <span>Có thể phần B (knowledge base rút gọn ~1.150 token) đã đủ cho hầu hết câu lệnh. RAG thêm một vector index, một mô hình embedding, một bộ phân loại truy vấn — và độ trễ. Hãy để dữ liệu Phase&nbsp;4 quyết định.</span>
+    </div></li>
+    <li><div>
+      <b>Mô phỏng đầy đủ Anthropic API</b>
+      <span>Mục 08 liệt kê chính xác tập con cần thiết. Mọi thứ ngoài đó — <code>usage</code>, <code>stop_reason</code>, content block đa phần tử, prompt caching thật — là code không ai gọi tới.</span>
+    </div></li>
+    <li><div>
+      <b>Tự động chuyển dự phòng sang cloud</b>
+      <span>Nếu người dùng chọn chế độ cục bộ, có thể họ chọn vì lý do vận hành hoặc bảo mật. Âm thầm gửi dữ liệu chuyến bay ra cloud khi Pi treo là hành vi sai. Hãy hỏi.</span>
+    </div></li>
+  </ul>
+</section>
+
+<!-- ══════════════════ 18 ══════════════════ -->
+<section id="s18">
+  <h2><span class="num">18</span>Bước triển khai đầu tiên</h2>
+
+  <div class="verdict">
+    <div class="vt">Việc nên làm đầu tiên</div>
+    <p><b>Gỡ endpoint, tên model, kiểu xác thực và timeout ra khỏi mã cứng, đưa vào <code>AISettings</code> — không thay đổi hành vi khi giữ giá trị mặc định.</b> Đây chính là Phase&nbsp;1.</p>
+  </div>
+
+  <h4>Vì sao là việc này</h4>
+  <ul>
+    <li><b>Nhỏ nhất mà mở khoá được nhiều nhất.</b> Chưa làm việc này thì không thể trỏ GCS tới bất cứ thứ gì trên Pi — kể cả gateway giả lập. Mọi phase sau đều chặn ở đây.</li>
+    <li><b>Ship được độc lập.</b> Với mặc định giữ nguyên, request gửi đi giống hệt trước. Merge được ngay cả khi dự án Pi tạm dừng.</li>
+    <li><b>Rủi ro thấp, dễ review.</b> Bốn Fact, một hàm tách ra, một combo box trong QML.</li>
+    <li><b>Ép tách đúng chỗ.</b> Việc rút <code>_buildRequestBody()</code> và <code>_parseWireResponse()</code> tạo ra đường nối mà mọi thứ về sau cần — mà không phải cam kết vào một thiết kế class nào.</li>
+  </ul>
+
+  <h4>Phạm vi cụ thể</h4>
+  <div class="tw">
+  <table>
+    <thead><tr><th>File</th><th>Thay đổi</th></tr></thead>
+    <tbody>
+      <tr><td><code>src/Settings/AI.SettingsGroup.json</code></td><td>Thêm <code>aiProvider</code>, <code>localEndpointUrl</code>, <code>modelName</code>, <code>requestTimeoutSec</code></td></tr>
+      <tr><td><code>src/Settings/AISettings.h</code></td><td>4 <code>DEFINE_SETTINGFACT</code></td></tr>
+      <tr><td><code>src/AI/AIChatController.cc</code></td><td><code>:677</code> URL từ Fact · <code>:680–681</code> header theo provider · <code>:708</code> model từ Fact · <code>RequestConfig</code> với timeout · tách <code>_buildRequestBody()</code> và <code>_parseWireResponse()</code></td></tr>
+      <tr><td><code>src/AI/AIChatController.h</code></td><td>Khai báo 2 hàm mới</td></tr>
+      <tr><td><code>src/UI/AppSettings/AISettings.qml</code></td><td>Combo provider; ô endpoint hiện có điều kiện</td></tr>
+      <tr><td><code>src/FlyView/AIChatWidget.qml</code></td><td><code>:29–30</code> điều kiện đổi từ "có claudeApiKey" sang "provider đã cấu hình"</td></tr>
+      <tr><td><code>src/AI/CMakeLists.txt</code></td><td>Thêm <code>AIKnowledgeBase.h</code> (đang thiếu)</td></tr>
+      <tr><td><code>test/</code></td><td>Unit test cho hai hàm mới tách</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h4>Điều kiện hoàn thành</h4>
+  <ul>
+    <li>Với mặc định, request gửi tới Anthropic giống hệt trước thay đổi.</li>
+    <li>Đặt <code>aiProvider=local</code> + một endpoint bất kỳ → request đi tới đó với header phù hợp.</li>
+    <li>Unit test pass; <code>pre-commit run --all-files</code> sạch.</li>
+  </ul>
+
+  <div class="note">
+    <p><b>Làm song song, gần như miễn phí:</b> khi đang sửa <code>_sendToClaudeAPI()</code>, thêm luôn một cờ ghi từng cặp request/response ra JSONL. Vài chục chuyến bay bình thường sẽ tự tích luỹ thành bộ chuẩn của Phase&nbsp;0 mà không phải ngồi viết tay — và đó là thứ quyết định liệu sau này bạn có biết mô hình cục bộ đã đủ tốt hay chưa.</p>
+  </div>
+
+  <div class="closer">
+    <p><b>Chưa có dòng code nào được sửa.</b> Tài liệu này là kết quả đọc mã nguồn: <code>src/AI/AIChatController.cc</code> (1.715 dòng), <code>AIChatController.h</code>, <code>AISystemPrompt.h</code>, <code>AIKnowledgeBase.h</code>, <code>POIItem.h</code>, <code>src/Settings/AISettings.{h,cc}</code>, <code>AI.SettingsGroup.json</code>, <code>src/FlyView/AIChatWidget.qml</code>, <code>FlyViewMap.qml</code>, <code>src/UI/AppSettings/AISettings.qml</code>, <code>src/Vehicle/Vehicle.{h,cc}</code> và <code>src/Utilities/Network/QGCNetworkHelper.{h,cc}</code>.</p>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  Titan Ground Control · Đánh giá kiến trúc Titan AI &amp; lộ trình AI cục bộ · 2026-09-11 · nhánh master @ 7358f8746
+</footer>
+
+</div>

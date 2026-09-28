@@ -1,0 +1,509 @@
+name: TD_Release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  actions: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 1: Prepare - Auto-increment patch version, create + push tag
+  # ─────────────────────────────────────────────────────────────────────
+  prepare:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      new_tag: ${{ steps.version.outputs.new_tag }}
+      prev_tag: ${{ steps.version.outputs.prev_tag }}
+      changelog: ${{ steps.changelog.outputs.changelog }}
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version
+        id: version
+        run: |
+          # Get latest tag reachable from HEAD on this branch (not upstream tags)
+          LATEST_TAG=$(git describe --tags --abbrev=0 --match 'v*' HEAD)
+          if [ -z "$LATEST_TAG" ]; then
+            echo "::error::No v* semver tags found"
+            exit 1
+          fi
+          echo "Latest tag: $LATEST_TAG"
+
+          # Parse version components
+          VERSION="${LATEST_TAG#v}"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          MINOR=$(echo "$VERSION" | cut -d. -f2)
+          PATCH=$(echo "$VERSION" | cut -d. -f3)
+
+          # Increment patch
+          NEW_PATCH=$((PATCH + 1))
+          NEW_TAG="v${MAJOR}.${MINOR}.${NEW_PATCH}"
+          echo "New tag: $NEW_TAG"
+
+          echo "prev_tag=$LATEST_TAG" >> "$GITHUB_OUTPUT"
+          echo "new_tag=$NEW_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG="${{ steps.version.outputs.prev_tag }}"
+          CHANGELOG=$(git log "${PREV_TAG}..HEAD" --pretty=format:"- %s (%h)" --no-merges)
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- No changes since ${PREV_TAG}"
+          fi
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            echo "$CHANGELOG"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          NEW_TAG="${{ steps.version.outputs.new_tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEW_TAG" -m "Release $NEW_TAG"
+          git push origin "$NEW_TAG"
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 2: Build Android APK (on Windows runner)
+  # ─────────────────────────────────────────────────────────────────────
+  build-android:
+    name: Build Android
+    needs: prepare
+    runs-on: windows-latest
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: pwsh
+
+    env:
+      PACKAGE: TitanGroundControl
+      QT_ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/deploy/android/android_release.keystore
+      QT_ANDROID_KEYSTORE_ALIAS: QGCAndroidKeyStore
+      QT_ANDROID_KEYSTORE_STORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      QT_ANDROID_KEYSTORE_KEY_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      QT_ANDROID_ABIS: arm64-v8a
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build Setup (Android)
+        id: setup
+        uses: ./.github/actions/build-setup
+        with:
+          mode: android
+          qt-host: windows
+          qt-arch: win64_msvc2022_64
+          abis: ${{ env.QT_ANDROID_ABIS }}
+          build-type: Release
+          cpm-modules: ${{ runner.temp }}/build/cpm_modules
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Create Debug Keystore
+        if: ${{ env.QT_ANDROID_KEYSTORE_STORE_PASS == '' }}
+        shell: bash
+        run: |
+          keytool -genkey -v \
+            -keystore "${RUNNER_TEMP}/debug.keystore" \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+          {
+            echo "QT_ANDROID_KEYSTORE_PATH=${RUNNER_TEMP}/debug.keystore"
+            echo "QT_ANDROID_KEYSTORE_ALIAS=androiddebugkey"
+            echo "QT_ANDROID_KEYSTORE_STORE_PASS=android"
+            echo "QT_ANDROID_KEYSTORE_KEY_PASS=android"
+          } >> "$GITHUB_ENV"
+
+      - name: Configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          stable: 'true'
+          use-qt-cmake: 'false'
+          extra-args: >-
+            -DCMAKE_WARN_DEPRECATED=FALSE
+            -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup.outputs.target_qt_root_dir }}/lib/cmake/Qt6/qt.toolchain.cmake
+            -DCMAKE_PREFIX_PATH=${{ steps.setup.outputs.target_qt_root_dir }}
+            -DQT_ANDROID_ABIS=${{ env.QT_ANDROID_ABIS }}
+            -DQT_HOST_PATH=${{ steps.setup.outputs.host_qt_root_dir }}
+            -DQT_ANDROID_SIGN_APK=ON
+
+      - name: Build
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Prepare Artifact
+        shell: bash
+        run: |
+          TEMP_DIR="${RUNNER_TEMP//\\//}"
+          APK_DIR="${TEMP_DIR}/build/android-build"
+          if ! ls "${APK_DIR}"/*.apk 1>/dev/null 2>&1; then
+            echo "::error::No APK files found in ${APK_DIR}"
+            ls -la "${APK_DIR}" 2>/dev/null || echo "Build directory does not exist"
+            exit 1
+          fi
+          cp "${APK_DIR}"/*.apk "${TEMP_DIR}/build/${{ env.PACKAGE }}.apk"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: TitanGroundControl-android
+          path: ${{ runner.temp }}/build/${{ env.PACKAGE }}.apk
+          retention-days: 7
+          compression-level: 0
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 3: Build macOS DMG
+  # ─────────────────────────────────────────────────────────────────────
+  build-macos:
+    name: Build macOS
+    needs: prepare
+    runs-on: macos-15
+    timeout-minutes: 120
+
+    env:
+      HAS_SIGNING_SECRETS: ${{ secrets.MACOS_CERT_P12_BASE64 != '' }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build Setup
+        id: setup
+        uses: ./.github/actions/build-setup
+        with:
+          restore-timestamps: 'true'
+          qt-host: mac
+          qt-arch: clang_64
+          build-type: Release
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: ${{ steps.setup.outputs.xcode_version }}
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: CMake configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          stable: 'true'
+          extra-args: -DQGC_MACOS_SIGN_WITH_IDENTITY=${{ env.HAS_SIGNING_SECRETS == 'true' && 'ON' || 'OFF' }}
+
+      - name: Build
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Import Code Signing Certificate
+        if: env.HAS_SIGNING_SECRETS == 'true'
+        uses: apple-actions/import-codesign-certs@v6
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          p12-password: ${{ secrets.MACOS_CERT_P12_PASSWORD }}
+
+      - name: Create signed/notarized DMG
+        if: env.HAS_SIGNING_SECRETS == 'true'
+        working-directory: ${{ runner.temp }}/build
+        run: cmake --install . --config Release
+        env:
+          QGC_MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+          QGC_MACOS_NOTARIZATION_USERNAME: ${{ secrets.MACOS_NOTARIZATION_USERNAME }}
+          QGC_MACOS_NOTARIZATION_PASSWORD: ${{ secrets.MACOS_NOTARIZATION_PASSWORD }}
+          QGC_MACOS_NOTARIZATION_TEAM_ID: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
+
+      - name: Create unsigned DMG
+        if: env.HAS_SIGNING_SECRETS != 'true'
+        working-directory: ${{ runner.temp }}/build
+        run: cmake --install . --config Release
+
+      - name: Upload DMG
+        uses: actions/upload-artifact@v7
+        with:
+          name: TitanGroundControl-macos
+          path: ${{ runner.temp }}/build/TitanGroundControl.dmg
+          retention-days: 7
+          compression-level: 0
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 4: Build Windows (AMD64 + ARM64 matrix)
+  # ─────────────────────────────────────────────────────────────────────
+  build-windows:
+    name: Build Windows ${{ matrix.arch_label }}
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 120
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: amd64
+            os: windows-2022
+            host: windows
+            arch: win64_msvc2022_64
+            arch_label: AMD64
+            msvc_arch: x64
+            package: TitanGroundControl-installer-AMD64
+            gstreamer: true
+
+          - variant: arm64
+            os: windows-11-arm
+            host: windows_arm64
+            arch: win64_msvc2022_arm64
+            arch_label: ARM64
+            msvc_arch: arm64
+            package: TitanGroundControl-installer-ARM64
+            gstreamer: false
+
+    defaults:
+      run:
+        shell: cmd
+
+    steps:
+      - name: Harden Runner
+        if: matrix.variant != 'arm64'
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build Setup
+        id: setup
+        uses: ./.github/actions/build-setup
+        with:
+          qt-host: ${{ matrix.host }}
+          qt-arch: ${{ matrix.arch }}
+          build-type: Release
+
+      - name: Set up MSVC environment
+        uses: TheMrMilchmann/setup-msvc-dev@v4
+        with:
+          arch: ${{ matrix.msvc_arch }}
+
+      - name: Fix Rust linker resolution (ARM64 native)
+        if: matrix.variant == 'arm64'
+        shell: bash
+        run: |
+          git_link="/c/Program Files/Git/usr/bin/link.exe"
+          if [ -f "$git_link" ]; then
+            mv "$git_link" "${git_link}.bak"
+            echo "Renamed Git link.exe to prevent Rust linker conflict"
+          fi
+
+      - name: Configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          stable: 'true'
+          extra-args: -DQGC_ENABLE_GST_VIDEOSTREAMING=${{ matrix.gstreamer && 'ON' || 'OFF' }}
+
+      - name: Build
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Create Installer
+        working-directory: ${{ runner.temp }}\build
+        run: cmake --install . --config Release
+
+      - name: Upload Installer
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.package }}
+          path: ${{ runner.temp }}\build\${{ matrix.package }}.exe
+          retention-days: 7
+          compression-level: 0
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 5: Build Linux AppImage (x86_64)
+  # ─────────────────────────────────────────────────────────────────────
+  build-linux:
+    name: Build Linux
+    needs: prepare
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Checkout repo
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Build Setup
+        uses: ./.github/actions/build-setup
+        with:
+          qt-host: linux
+          qt-arch: linux_gcc_64
+          build-type: Release
+
+      - name: Install Dependencies
+        uses: ./.github/actions/install-dependencies
+
+      - name: Configure
+        uses: ./.github/actions/cmake-configure
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+          stable: 'true'
+
+      - name: Build
+        uses: ./.github/actions/cmake-build
+        with:
+          build-dir: ${{ runner.temp }}/build
+          build-type: Release
+
+      - name: Create AppImage
+        working-directory: ${{ runner.temp }}/build
+        run: cmake --install . --config Release
+
+      - name: Package AppImage as zip
+        working-directory: ${{ runner.temp }}/build
+        run: zip -j TitanGroundControl-Linux-x86_64.zip TitanGroundControl-x86_64.AppImage
+
+      - name: Upload Linux AppImage
+        uses: actions/upload-artifact@v7
+        with:
+          name: TitanGroundControl-Linux-x86_64
+          path: ${{ runner.temp }}/build/TitanGroundControl-Linux-x86_64.zip
+          retention-days: 7
+          compression-level: 0
+
+  # ─────────────────────────────────────────────────────────────────────
+  # Job 6: Create GitHub Release with all artifacts
+  # ─────────────────────────────────────────────────────────────────────
+  release:
+    name: Create Release
+    needs: [prepare, build-android, build-macos, build-windows, build-linux]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Download Android APK
+        uses: actions/download-artifact@v8
+        with:
+          name: TitanGroundControl-android
+          path: release-assets
+
+      - name: Download macOS DMG
+        uses: actions/download-artifact@v8
+        with:
+          name: TitanGroundControl-macos
+          path: release-assets
+
+      - name: Download Windows AMD64 Installer
+        uses: actions/download-artifact@v8
+        with:
+          name: TitanGroundControl-installer-AMD64
+          path: release-assets
+
+      - name: Download Windows ARM64 Installer
+        uses: actions/download-artifact@v8
+        with:
+          name: TitanGroundControl-installer-ARM64
+          path: release-assets
+
+      - name: Download Linux AppImage
+        uses: actions/download-artifact@v8
+        with:
+          name: TitanGroundControl-Linux-x86_64
+          path: release-assets
+
+      - name: List release assets
+        run: ls -lhR release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.prepare.outputs.new_tag }}
+          name: ${{ needs.prepare.outputs.new_tag }}
+          body: |
+            ## Changes since ${{ needs.prepare.outputs.prev_tag }}
+
+            ${{ needs.prepare.outputs.changelog }}
+
+            ---
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ needs.prepare.outputs.prev_tag }}...${{ needs.prepare.outputs.new_tag }}
+          draft: false
+          prerelease: false
+          files: |
+            release-assets/TitanGroundControl.apk
+            release-assets/TitanGroundControl.dmg
+            release-assets/TitanGroundControl-installer-AMD64.exe
+            release-assets/TitanGroundControl-installer-ARM64.exe
+            release-assets/TitanGroundControl-Linux-x86_64.zip
+          fail_on_unmatched_files: true

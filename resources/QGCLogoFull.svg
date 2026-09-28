@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2048 2048">
+    <!-- Purple background squircle -->
+    <rect x="0" y="0" width="2048" height="2048" rx="380" ry="380" fill="#4B2C6D"/>
+
+    <!-- Logo copy 3 - topmost, smallest, most transparent -->
+    <svg x="557" y="333" width="935" height="691" viewBox="0 0 270.2 200.38" opacity="0.25">
+        <g fill="#A2DEF5">
+            <path d="M135.1,8.89l-25.6,50.69,25.6,140.8,25.6-140.8-25.6-50.69ZM0,0v28.49l106.66,28.28,25.6-50.69L0,0ZM137.95,6.08L270.2,0v28.49l-106.66,28.28-25.6-50.69Z"/>
+        </g>
+    </svg>
+
+    <!-- Logo copy 2 - medium size, 50% opacity -->
+    <svg x="416" y="395" width="1216" height="899" viewBox="0 0 270.2 200.38" opacity="0.50">
+        <g fill="#93D9F4">
+            <path d="M135.1,8.89l-25.6,50.69,25.6,140.8,25.6-140.8-25.6-50.69ZM0,0v28.49l106.66,28.28,25.6-50.69L0,0ZM137.95,6.08L270.2,0v28.49l-106.66,28.28-25.6-50.69Z"/>
+        </g>
+    </svg>
+
+    <!-- Logo copy - larger, 75% opacity -->
+    <svg x="323" y="479" width="1402" height="1037" viewBox="0 0 270.2 200.38" opacity="0.75">
+        <g fill="#7ED2F2">
+            <path d="M135.1,8.89l-25.6,50.69,25.6,140.8,25.6-140.8-25.6-50.69ZM0,0v28.49l106.66,28.28,25.6-50.69L0,0ZM137.95,6.08L270.2,0v28.49l-106.66,28.28-25.6-50.69Z"/>
+        </g>
+    </svg>
+
+    <!-- Logo - front, full size, full opacity, white -->
+    <svg x="276" y="593" width="1496" height="1106" viewBox="0 0 270.2 200.38" opacity="1.0">
+        <g fill="#FFFFFF">
+            <path d="M135.1,8.89l-25.6,50.69,25.6,140.8,25.6-140.8-25.6-50.69ZM0,0v28.49l106.66,28.28,25.6-50.69L0,0ZM137.95,6.08L270.2,0v28.49l-106.66,28.28-25.6-50.69Z"/>
+        </g>
+    </svg>
+</svg>
