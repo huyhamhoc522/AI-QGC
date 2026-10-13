@@ -31,7 +31,7 @@ jobs:
         uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: .github/build-config.json
           sparse-checkout-cone-mode: false
@@ -128,7 +128,7 @@ jobs:
       # Keep this list identical to the save-baselines job's checkout below — they share scripts.
       - name: Checkout
         if: steps.pr.outputs.result != 'null' && steps.gate.outputs.ready == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             .github/actions/download-all-artifacts
@@ -228,7 +228,7 @@ jobs:
 
       - name: Restore baseline sizes
         if: steps.pr.outputs.result != 'null' && steps.builds.outputs.all_complete == 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         continue-on-error: true
         with:
           path: baseline-sizes.json
@@ -236,7 +236,7 @@ jobs:
 
       - name: Restore baseline coverage
         if: steps.pr.outputs.result != 'null' && steps.builds.outputs.all_complete == 'true'
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         continue-on-error: true
         with:
           path: baseline-coverage.xml
@@ -367,7 +367,7 @@ jobs:
       # Keep this list identical to post-pr-comment's checkout above.
       - name: Checkout
         if: steps.gate.outputs.ready == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           sparse-checkout: |
             .github/actions/download-all-artifacts
@@ -445,7 +445,7 @@ jobs:
 
       - name: Cache artifact sizes as latest
         if: steps.ready.outputs.ready == 'true' && hashFiles('baseline-sizes.json') != ''
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: baseline-sizes.json
           key: artifact-sizes-baseline-latest
@@ -463,7 +463,7 @@ jobs:
 
       - name: Save coverage baseline
         if: steps.ready.outputs.ready == 'true' && hashFiles('baseline-coverage.xml') != ''
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: baseline-coverage.xml
           key: coverage-baseline-latest
