@@ -94,7 +94,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: ${{ github.event_name == 'pull_request' && 1 || 0 }}
 
@@ -232,7 +232,7 @@ jobs:
       - name: Restore AVD cache
         if: ${{ matrix.emulator }}
         id: avd-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.android/avd/*
@@ -267,7 +267,7 @@ jobs:
 
       - name: Save AVD cache
         if: ${{ matrix.emulator && github.event_name != 'pull_request' && steps.avd-cache.outputs.cache-hit != 'true' && steps.avd-snapshot.outcome == 'success' }}
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.android/avd/*
